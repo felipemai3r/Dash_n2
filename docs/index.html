@@ -1739,7 +1739,7 @@
       if (min == null || isNaN(min)) return "—";
       min = Math.round(min);
       if (min < 60) return `${min} min`;
-      if (min < 1440) {const h = Math.floor(min / 60), m = min % 60; return m ? `${h}h ${m}min` : `${h}h`;}
+      if (min < 1440) { const h = Math.floor(min / 60), m = min % 60; return m ? `${h}h ${m}min` : `${h}h`; }
       const d = Math.floor(min / 1440), h = Math.round((min % 1440) / 60);
       return h ? `${d}d ${h}h` : `${d}d`;
     }
@@ -1761,20 +1761,25 @@
     }
     // Busca um campo pelo nome normalizado (ignora acentos, espaços, underscores e caixa) —
     // protege contra variações como "Assumiu _Depois_da_Criação do Jira?"
-    function normKey(k) {return String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");}
+    function normKey(k) { return String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); }
     function getCampo(t, alvoNormalizado) {
       for (const k of Object.keys(t)) if (normKey(k) === alvoNormalizado) return t[k];
       return null;
     }
+    // Converte um valor de duração em minutos. Aceita número (minutos), texto numérico,
+    // ou duração "H:MM:SS" / "H:MM" vinda da planilha (horas podem passar de 24)
+    function duracaoMin(v) {
+      if (v == null || v === "") return null;
+      if (typeof v === "number") return isNaN(v) ? null : v;
+      const s = String(v).trim();
+      const m = s.match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
+      if (m) return Number(m[1]) * 60 + Number(m[2]) + (Number(m[3]) || 0) / 60;
+      const n = Number(s.replace(",", "."));
+      return isNaN(n) ? null : n;
+    }
     // "Tempo_para_considerar" vem como duração "H:MM:SS" (horas podem passar de 24) → minutos
     function tempoConsiderarMin(t) {
-      const v = getCampo(t, "tempoparaconsiderar");
-      if (v == null || v === "") return null;
-      if (typeof v === "number") return v;
-      const m = String(v).trim().match(/^(\d+):(\d{1,2})(?::(\d{1,2}))?$/);
-      if (m) return Number(m[1]) * 60 + Number(m[2]) + (Number(m[3]) || 0) / 60;
-      const n = Number(v);
-      return isNaN(n) ? null : n;
+      return duracaoMin(getCampo(t, "tempoparaconsiderar"));
     }
     function assumiuDepois(t) {
       return String(getCampo(t, "assumiudepoisdacriacaodojira") || "").trim().toLowerCase() === "sim";
@@ -1788,8 +1793,8 @@
       return diffMin(dir, t.dataEntradaN2);
     }
     // Meta de SLA de Diagnóstico por faixa de prioridade (minutos): Highest 2h / Alta 4h / Média 6h / Baixa 8h
-    const SLA_META_MIN = {highest: 120, alta: 240, media: 360, baixa: 480};
-    const SLA_META_LABEL = {highest: "≤ 2h", alta: "≤ 4h", media: "≤ 6h", baixa: "≤ 8h"};
+    const SLA_META_MIN = { highest: 120, alta: 240, media: 360, baixa: 480 };
+    const SLA_META_LABEL = { highest: "≤ 2h", alta: "≤ 4h", media: "≤ 6h", baixa: "≤ 8h" };
     const SLA_META_PCT = 80; // meta oficial: ≥80% dentro do prazo
     // Ticket dentro do SLA da sua faixa? null = sem faixa/tempo pra avaliar (fica fora do numerador, dentro do denominador)
     function dentroSLA(t) {
@@ -1804,7 +1809,7 @@
       if (!t.jiraIssueKey) return null;
       const tc = tempoConsiderarMin(t);
       if (tc != null) return tc;
-      return toNum(t["abertura_até_aberturaJira"]) ?? diffMin(t.dataCriacaoJira, t.dataEntradaN2);
+      return duracaoMin(t["abertura_até_aberturaJira"]) ?? diffMin(t.dataCriacaoJira, t.dataEntradaN2);
     }
     // Corta os valores acima do percentil selecionado (remove discrepantes dos tempos médios)
     function trimPercentil(vals) {
@@ -1820,7 +1825,7 @@
       if ($("f-fim").value) body.dataFim = $("f-fim").value;
       const res = await fetch(S.apiUrl, {
         method: "POST",
-        headers: {"Content-Type": "application/json", "X-Api-Token": S.token},
+        headers: { "Content-Type": "application/json", "X-Api-Token": S.token },
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error(`Falha na chamada (HTTP ${res.status}).`);
@@ -1834,7 +1839,7 @@
       const token = $("inp-token").value.trim();
       const err = $("gate-error");
       err.style.display = "none";
-      if (!token) {err.textContent = "Informe seu token de acesso."; err.style.display = "block"; return;}
+      if (!token) { err.textContent = "Informe seu token de acesso."; err.style.display = "block"; return; }
       S.apiUrl = CONFIG.API_URL; S.token = token; S.demo = false;
       $("btn-login").textContent = "Carregando…"; $("btn-login").disabled = true;
       try {
@@ -1847,7 +1852,7 @@
         $("btn-login").textContent = "Entrar"; $("btn-login").disabled = false;
       }
     });
-    $("inp-token").addEventListener("keydown", e => {if (e.key === "Enter") $("btn-login").click();});
+    $("inp-token").addEventListener("keydown", e => { if (e.key === "Enter") $("btn-login").click(); });
 
     $("btn-demo").addEventListener("click", () => {
       S.demo = true;
@@ -1897,7 +1902,7 @@
       renderTudo();
     }
 
-    ["f-ini", "f-fim", "f-n2"].forEach(id => $(id).addEventListener("change", () => {marcarPreset(null); aplicarFiltros();}));
+    ["f-ini", "f-fim", "f-n2"].forEach(id => $(id).addEventListener("change", () => { marcarPreset(null); aplicarFiltros(); }));
 
     $("presets").addEventListener("click", e => {
       const b = e.target.closest(".preset"); if (!b) return;
@@ -1905,9 +1910,9 @@
       const hoje = new Date(); const p = n => String(n).padStart(2, "0");
       const iso = d => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
       const v = b.dataset.days;
-      if (v === "all") {$("f-ini").value = ""; $("f-fim").value = "";}
-      else if (v === "month") {$("f-ini").value = iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); $("f-fim").value = iso(hoje);}
-      else {const d = new Date(hoje); d.setDate(d.getDate() - Number(v) + 1); $("f-ini").value = iso(d); $("f-fim").value = iso(hoje);}
+      if (v === "all") { $("f-ini").value = ""; $("f-fim").value = ""; }
+      else if (v === "month") { $("f-ini").value = iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)); $("f-fim").value = iso(hoje); }
+      else { const d = new Date(hoje); d.setDate(d.getDate() - Number(v) + 1); $("f-ini").value = iso(d); $("f-fim").value = iso(hoje); }
       aplicarFiltros();
     });
     function marcarPreset(btn) {
@@ -1916,15 +1921,15 @@
     }
 
     $("btn-reload").addEventListener("click", async () => {
-      if (S.demo) {S.raw = gerarDemo(); popularSelectN2(); popularFiltrosTabela(); aplicarFiltros(); return;}
+      if (S.demo) { S.raw = gerarDemo(); popularSelectN2(); popularFiltrosTabela(); aplicarFiltros(); return; }
       const btn = $("btn-reload"); btn.classList.add("loading"); btn.disabled = true;
       try {
         S.raw = await fetchDados();
         popularSelectN2(); popularFiltrosTabela(); aplicarFiltros();
         const p = n => String(n).padStart(2, "0"); const now = new Date();
         $("meta-updated").textContent = `atualizado às ${p(now.getHours())}:${p(now.getMinutes())}`;
-      } catch (e) {alert("Não foi possível atualizar: " + e.message);}
-      finally {btn.classList.remove("loading"); btn.disabled = false;}
+      } catch (e) { alert("Não foi possível atualizar: " + e.message); }
+      finally { btn.classList.remove("loading"); btn.disabled = false; }
     });
 
     /* ================= CÁLCULOS ================= */
@@ -1960,12 +1965,12 @@
       }
 
       // tempos médios (com corte de percentil, se selecionado)
-      const media = a => {const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null;};
+      const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
       const col = (fn) => tickets.map(fn).filter(v => v != null && !isNaN(v) && v >= 0);
 
-      const tAssumir = media(col(t => toNum(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2)));
+      const tAssumir = media(col(t => duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2)));
       const tAteJira = media(col(t => minutosAteJira(t)));
-      const tPessoaJira = media(col(t => t.jiraIssueKey ? (toNum(t["N2_ate_aberturaJira"]) ?? diffMin(t.dataCriacaoJira, t.dataAtribuicaoPessoaN2)) : null));
+      const tPessoaJira = media(col(t => t.jiraIssueKey ? (duracaoMin(t["N2_ate_aberturaJira"]) ?? diffMin(t.dataCriacaoJira, t.dataAtribuicaoPessoaN2)) : null));
       const tResolucao = media(col(t => t.dataFinalizacao ? diffMin(t.dataFinalizacao, t.dataEntradaN2) : null));
       const tLifetime = media(col(t => toNum(t.lifetimeWorkingTime)));
 
@@ -1992,7 +1997,7 @@
         if (!map.has(nome)) map.set(nome, []);
         map.get(nome).push(t);
       });
-      const media = a => {const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null;};
+      const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
       const col = (arr, fn) => arr.map(fn).filter(v => v != null && !isNaN(v) && v >= 0);
       return [...map.entries()].map(([nome, ts]) => {
         const validos = ts.filter(t => t.ticketIndevido !== "Sim");
@@ -2018,7 +2023,7 @@
           depJira: ts.filter(assumiuDepois).length,
           indevidos: ts.length - validos.length,
           kpi1, sla90,
-          tAssumir: media(col(ts, t => toNum(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))),
+          tAssumir: media(col(ts, t => duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))),
           tJira: media(col(ts, t => minutosAteJira(t))),
           tResolucao: media(col(ts, t => t.dataFinalizacao ? diffMin(t.dataFinalizacao, t.dataEntradaN2) : null)),
           pHighest: highests.length, pAlta: altas.length, pMedia: medias.length, pBaixa: baixas.length,
@@ -2030,29 +2035,29 @@
       });
     }
 
-    const PS = {key: "total", dir: -1}; // ordenação da tabela de pessoas
+    const PS = { key: "total", dir: -1 }; // ordenação da tabela de pessoas
 
     // Registro de colunas do ranking do time. def:1 = visível por padrão.
     const PCOLS = [
-      {k: "total", label: "Atendidos", def: 1, g: "Geral"},
-      {k: "abertos", label: "Em aberto", def: 1, g: "Geral"},
-      {k: "comJira", label: "Com Jira", def: 1, g: "Geral"},
-      {k: "depJira", label: "Assumiu após Jira", def: 1, g: "Geral"},
-      {k: "semJira", label: "Sem Jira", def: 1, g: "Geral"},
-      {k: "indevidos", label: "Indevidos", def: 1, g: "Geral"},
-      {k: "kpi1", label: "% sem dev", def: 1, g: "Indicadores", fmt: "pct", best: "max"},
-      {k: "sla90", label: "SLA 90 min", def: 1, g: "Indicadores", fmt: "pct", best: "max"},
-      {k: "tAssumir", label: "Média até assumir", def: 1, g: "Tempos", fmt: "min", best: "min"},
-      {k: "tJira", label: "Média até criar Jira", def: 1, g: "Tempos", fmt: "min", best: "min"},
-      {k: "tResolucao", label: "Média até finalizar", def: 1, g: "Tempos", fmt: "min", best: "min"},
-      {k: "pHighest", label: "Qtd. prioridade Highest", def: 0, g: "Prioridades"},
-      {k: "pAlta", label: "Qtd. prioridade Alta", def: 0, g: "Prioridades"},
-      {k: "pMedia", label: "Qtd. prioridade Média", def: 0, g: "Prioridades"},
-      {k: "pBaixa", label: "Qtd. prioridade Baixa", def: 0, g: "Prioridades"},
-      {k: "tDirHighest", label: "Direcionamento Highest", def: 0, g: "Prioridades", fmt: "min", best: "min"},
-      {k: "tDirAlta", label: "Direcionamento Alta", def: 0, g: "Prioridades", fmt: "min", best: "min"},
-      {k: "tDirMedia", label: "Direcionamento Média", def: 0, g: "Prioridades", fmt: "min", best: "min"},
-      {k: "tDirBaixa", label: "Direcionamento Baixa", def: 0, g: "Prioridades", fmt: "min", best: "min"}
+      { k: "total", label: "Atendidos", def: 1, g: "Geral" },
+      { k: "abertos", label: "Em aberto", def: 1, g: "Geral" },
+      { k: "comJira", label: "Com Jira", def: 1, g: "Geral" },
+      { k: "depJira", label: "Assumiu após Jira", def: 1, g: "Geral" },
+      { k: "semJira", label: "Sem Jira", def: 1, g: "Geral" },
+      { k: "indevidos", label: "Indevidos", def: 1, g: "Geral" },
+      { k: "kpi1", label: "% sem dev", def: 1, g: "Indicadores", fmt: "pct", best: "max" },
+      { k: "sla90", label: "SLA 90 min", def: 1, g: "Indicadores", fmt: "pct", best: "max" },
+      { k: "tAssumir", label: "Média até assumir", def: 1, g: "Tempos", fmt: "min", best: "min" },
+      { k: "tJira", label: "Média até criar Jira", def: 1, g: "Tempos", fmt: "min", best: "min" },
+      { k: "tResolucao", label: "Média até finalizar", def: 1, g: "Tempos", fmt: "min", best: "min" },
+      { k: "pHighest", label: "Qtd. prioridade Highest", def: 0, g: "Prioridades" },
+      { k: "pAlta", label: "Qtd. prioridade Alta", def: 0, g: "Prioridades" },
+      { k: "pMedia", label: "Qtd. prioridade Média", def: 0, g: "Prioridades" },
+      { k: "pBaixa", label: "Qtd. prioridade Baixa", def: 0, g: "Prioridades" },
+      { k: "tDirHighest", label: "Direcionamento Highest", def: 0, g: "Prioridades", fmt: "min", best: "min" },
+      { k: "tDirAlta", label: "Direcionamento Alta", def: 0, g: "Prioridades", fmt: "min", best: "min" },
+      { k: "tDirMedia", label: "Direcionamento Média", def: 0, g: "Prioridades", fmt: "min", best: "min" },
+      { k: "tDirBaixa", label: "Direcionamento Baixa", def: 0, g: "Prioridades", fmt: "min", best: "min" }
     ];
     S.pcols = new Set(PCOLS.filter(c => c.def).map(c => c.k));
 
@@ -2065,12 +2070,12 @@
 
     function renderPessoas() {
       // se a coluna ordenada foi ocultada, volta pra "Atendidos"
-      if (PS.key !== "nome" && !S.pcols.has(PS.key)) {PS.key = "total"; PS.dir = -1;}
+      if (PS.key !== "nome" && !S.pcols.has(PS.key)) { PS.key = "total"; PS.dir = -1; }
       renderPessoasHead();
       const stats = calcPessoas(S.view);
       const body = $("tbl-pessoas-body");
       const nCols = 1 + S.pcols.size;
-      if (!stats.length) {body.innerHTML = `<tr><td colspan="${nCols}"><div class="empty">Sem dados no período.</div></td></tr>`; return;}
+      if (!stats.length) { body.innerHTML = `<tr><td colspan="${nCols}"><div class="empty">Sem dados no período.</div></td></tr>`; return; }
 
       stats.sort((a, b) => {
         let va = a[PS.key], vb = b[PS.key];
@@ -2116,7 +2121,7 @@
       ).join("");
     }
     montarColpick();
-    $("btn-cols").addEventListener("click", e => {e.stopPropagation(); $("colpick").classList.toggle("open");});
+    $("btn-cols").addEventListener("click", e => { e.stopPropagation(); $("colpick").classList.toggle("open"); });
     $("colpick-menu").addEventListener("click", e => e.stopPropagation());
     $("colpick-menu").addEventListener("change", e => {
       const cb = e.target.closest("input[type=checkbox]"); if (!cb) return;
@@ -2129,7 +2134,7 @@
       const th = e.target.closest("th"); if (!th) return;
       const k = th.dataset.k; if (!k) return;
       if (PS.key === k) PS.dir *= -1;
-      else {PS.key = k; PS.dir = (k === "nome") ? 1 : -1;}
+      else { PS.key = k; PS.dir = (k === "nome") ? 1 : -1; }
       renderPessoas();
     });
 
@@ -2154,18 +2159,18 @@
     }
     function calcSlaFaixas() {
       const base = baseSLA();
-      const out = {__base: base};
+      const out = { __base: base };
       ["highest", "alta", "media", "baixa"].forEach(f => {
         const grupo = base.filter(t => prioDe(t) === f);
         const dentro = grupo.filter(t => dentroSLA(t) === true).length;
-        out[f] = {total: grupo.length, dentro, pct: grupo.length ? dentro / grupo.length * 100 : null};
+        out[f] = { total: grupo.length, dentro, pct: grupo.length ? dentro / grupo.length * 100 : null };
       });
       return out;
     }
 
     function renderSlaFaixas() {
       const ordem = ["highest", "alta", "media", "baixa"];
-      const nome = {highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa"};
+      const nome = { highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa" };
       const sf = calcSlaFaixas();
       const comInd = S.slaComIndevidos;
       const fmtPct = p => p == null ? "sem dados" : p.toFixed(1).replace(".", ",") + "%";
@@ -2230,7 +2235,7 @@
       document.querySelectorAll("#sla-toggle button").forEach(x => x.classList.toggle("on", x === b));
       renderSlaFaixas();
       // o recorte da listagem segue a mesma base do toggle, então re-renderiza se houver drill ativo
-      if (S.drill) {renderChipDrill(); renderTabela();}
+      if (S.drill) { renderChipDrill(); renderTabela(); }
     });
 
     /* clique nos cards de prioridade → mesmos recortes da tabela */
@@ -2246,14 +2251,14 @@
     });
 
     /* clique nas células do SLA → filtra a listagem final e rola até ela */
-    const PRIO_NOME = {highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa", todos: "todas"};
-    const SLA_NOME = {dentro: "dentro do prazo", fora: "fora do prazo", todos: ""};
+    const PRIO_NOME = { highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa", todos: "todas" };
+    const SLA_NOME = { dentro: "dentro do prazo", fora: "fora do prazo", todos: "" };
     function aplicarDrill(prio, sla) {
-      S.drill = {prio, sla};
+      S.drill = { prio, sla };
       S.tableLimit = CONFIG.TABLE_PAGE;
       renderChipDrill();
       renderTabela();
-      document.querySelector("#tbl-count").scrollIntoView({behavior: "smooth", block: "start"});
+      document.querySelector("#tbl-count").scrollIntoView({ behavior: "smooth", block: "start" });
     }
     function limparDrill() {
       S.drill = null;
@@ -2262,7 +2267,7 @@
     }
     function renderChipDrill() {
       const box = $("drill-chip");
-      if (!S.drill) {box.style.display = "none"; box.innerHTML = ""; return;}
+      if (!S.drill) { box.style.display = "none"; box.innerHTML = ""; return; }
       const partes = [];
       if (S.drill.prio && S.drill.prio !== "todos") partes.push(`prioridade ${PRIO_NOME[S.drill.prio]}`);
       if (S.drill.sla && S.drill.sla !== "todos") partes.push(SLA_NOME[S.drill.sla]);
@@ -2278,7 +2283,7 @@
     });
 
     function renderPrioridades() {
-      const media = a => {const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null;};
+      const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
       const col = (arr, fn) => arr.map(fn).filter(v => v != null && !isNaN(v) && v >= 0);
       const grupos = new Map();
       S.view.forEach(t => {
@@ -2286,8 +2291,8 @@
         if (!grupos.has(u)) grupos.set(u, []);
         grupos.get(u).push(t);
       });
-      const ordem = {"Highest": 0, "Highest ": 0, "High": 1, "Alta": 1, "Medium": 2, "Média": 2, "Low": 3, "Baixa": 3};
-      const nomeP = u => ({Highest: "Highest", High: "Alta", Medium: "Média", Low: "Baixa"})[u] || u;
+      const ordem = { "Highest": 0, "Highest ": 0, "High": 1, "Alta": 1, "Medium": 2, "Média": 2, "Low": 3, "Baixa": 3 };
+      const nomeP = u => ({ Highest: "Highest", High: "Alta", Medium: "Média", Low: "Baixa" })[u] || u;
       const linhas = [...grupos.entries()].sort((a, b) => (ordem[a[0]] ?? 9) - (ordem[b[0]] ?? 9) || b[1].length - a[1].length);
       $("tbl-prior-body").innerHTML = linhas.map(([u, ts]) => {
         const ab = ts.filter(t => !isFechado(t)).length;
@@ -2296,7 +2301,7 @@
       <td>${ts.length}</td>
       <td>${ab}</td>
       <td>${ts.length - ab}</td>
-      <td>${fmtMin(media(col(ts, t => toNum(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))))}</td>
+      <td>${fmtMin(media(col(ts, t => duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))))}</td>
       <td>${fmtMin(media(col(ts, t => minutosAteJira(t))))}</td>
       <td>${fmtMin(media(col(ts, t => t.dataFinalizacao ? diffMin(t.dataFinalizacao, t.dataEntradaN2) : null)))}</td>
       <td>${fmtMin(media(col(ts, t => toNum(t.lifetimeWorkingTime))))}</td>
@@ -2328,7 +2333,7 @@
         const bar = $(barId), tag = $(tagId);
         bar.style.width = (val ?? 0) + "%";
         bar.classList.remove("hit", "miss");
-        if (val == null) {tag.className = "meta-tag"; tag.textContent = ""; return;}
+        if (val == null) { tag.className = "meta-tag"; tag.textContent = ""; return; }
         const bate = val >= SLA_META_PCT;
         bar.classList.add(bate ? "hit" : "miss");
         tag.className = "meta-tag " + (bate ? "ok" : "no");
@@ -2406,7 +2411,7 @@
           key = dt.getFullYear() * 100 + (dt.getMonth() + 1);
           label = `${meses[dt.getMonth()]}/${String(dt.getFullYear()).slice(2)}`;
         }
-        if (!map.has(key)) map.set(key, {label, fech: 0, ab: 0});
+        if (!map.has(key)) map.set(key, { label, fech: 0, ab: 0 });
         const p = map.get(key);
         if (isFechado(t)) p.fech++; else p.ab++;
       });
@@ -2414,7 +2419,7 @@
       $("hist-sub").textContent = S.histMode === "day" ? "entrada no N2 por dia · fechados × abertos"
         : S.histMode === "week" ? "entrada no N2 por semana (início na segunda) · fechados × abertos"
           : "entrada no N2 por mês · fechados × abertos";
-      if (!pontos.length) {box.innerHTML = '<div class="empty" style="width:100%">Nenhum ticket no período selecionado.</div>'; return;}
+      if (!pontos.length) { box.innerHTML = '<div class="empty" style="width:100%">Nenhum ticket no período selecionado.</div>'; return; }
       const max = Math.max(...pontos.map(p => p.fech + p.ab));
       box.classList.toggle("dense", pontos.length > 24);
       box.innerHTML = pontos.map(p => {
@@ -2434,7 +2439,7 @@
     }
 
     function renderRank(el, pares, topN, accent, clicavel) {
-      if (!pares.length) {el.innerHTML = '<div class="empty">Sem dados no período.</div>'; return;}
+      if (!pares.length) { el.innerHTML = '<div class="empty">Sem dados no período.</div>'; return; }
       const top = pares.slice(0, topN);
       const max = top[0][1];
       el.innerHTML = top.map(([nome, qt]) => `
@@ -2449,11 +2454,11 @@
       const nJira = c.comJira.length, nFin = tickets.filter(t => t.dataFinalizacao).length;
       const seta = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h11M9 4l4 4-4 4"/></svg>';
       const cards = [
-        {flow: "Entrada N2 " + seta + " assumir", val: c.tAssumir, n: "média geral"},
-        {flow: "Entrada N2 " + seta + " abertura Jira", val: c.tAteJira, n: `${nJira} tickets com Jira`},
-        {flow: "Assumido " + seta + " abertura Jira", val: c.tPessoaJira, n: `${nJira} tickets com Jira`},
-        {flow: "Entrada N2 " + seta + " finalização", val: c.tResolucao, n: `${nFin} tickets finalizados`},
-        {flow: "Vida útil do ticket", val: c.tLifetime, n: "lifetime working time"}
+        { flow: "Entrada N2 " + seta + " assumir", val: c.tAssumir, n: "média geral" },
+        { flow: "Entrada N2 " + seta + " abertura Jira", val: c.tAteJira, n: `${nJira} tickets com Jira` },
+        { flow: "Assumido " + seta + " abertura Jira", val: c.tPessoaJira, n: `${nJira} tickets com Jira` },
+        { flow: "Entrada N2 " + seta + " finalização", val: c.tResolucao, n: `${nFin} tickets finalizados` },
+        { flow: "Vida útil do ticket", val: c.tLifetime, n: "lifetime working time" }
       ];
       $("time-grid").innerHTML = cards.map(k => `
     <div class="time-card">
@@ -2480,11 +2485,11 @@
     });
 
     /* ================= TABELA ================= */
-    $("tbl-search").addEventListener("input", () => {S.tableLimit = CONFIG.TABLE_PAGE; renderTabela();});
-    ["t-cliente", "t-status", "t-jira", "t-sit", "t-dep"].forEach(id => $(id).addEventListener("change", () => {S.tableLimit = CONFIG.TABLE_PAGE; renderTabela();}));
-    $("btn-more").addEventListener("click", () => {S.tableLimit += CONFIG.TABLE_PAGE; renderTabela();});
+    $("tbl-search").addEventListener("input", () => { S.tableLimit = CONFIG.TABLE_PAGE; renderTabela(); });
+    ["t-cliente", "t-status", "t-jira", "t-sit", "t-dep"].forEach(id => $(id).addEventListener("change", () => { S.tableLimit = CONFIG.TABLE_PAGE; renderTabela(); }));
+    $("btn-more").addEventListener("click", () => { S.tableLimit += CONFIG.TABLE_PAGE; renderTabela(); });
     $("btn-export").addEventListener("click", exportarCSV);
-    $("f-pct").addEventListener("change", () => {S.percentil = Number($("f-pct").value); renderTudo();});
+    $("f-pct").addEventListener("change", () => { S.percentil = Number($("f-pct").value); renderTudo(); });
 
     function popularFiltrosTabela() {
       const st = $("t-status"), cl = $("t-cliente");
@@ -2493,7 +2498,7 @@
       st.innerHTML = '<option value="">Todos os status</option>' + statuses.map(s => `<option>${escapeHtml(s)}</option>`).join("");
       if (statuses.includes(curS)) st.value = curS;
       const cliSet = new Set();
-      S.raw.forEach(t => String(t.clientes || "").split(";").forEach(c => {c = c.trim(); if (c) cliSet.add(c);}));
+      S.raw.forEach(t => String(t.clientes || "").split(";").forEach(c => { c = c.trim(); if (c) cliSet.add(c); }));
       const clientes = [...cliSet].sort((a, b) => a.localeCompare(b, "pt-BR"));
       cl.innerHTML = '<option value="">Todos os clientes</option>' + clientes.map(c => `<option>${escapeHtml(c)}</option>`).join("");
       if (clientes.includes(curC)) cl.value = curC;
@@ -2536,25 +2541,25 @@
 
     function exportarCSV() {
       const rows = tabelaRows();
-      if (!rows.length) {alert("Nenhum ticket nos filtros atuais pra exportar."); return;}
+      if (!rows.length) { alert("Nenhum ticket nos filtros atuais pra exportar."); return; }
       const cols = [
         ["ticketId", "Ticket"], ["subject", "Assunto"], ["ownerAtual", "Responsável"], ["status", "Status"],
         ["urgency", "Prioridade"], ["clientes", "Clientes"], ["dataEntradaN2", "Entrada N2"],
         ["dataAtribuicaoPessoaN2", "Assumido em"], ["Abertura_até_assumir", "Min até assumir"],
         ["jiraIssueKey", "Jira"], ["dataCriacaoJira", "Criação Jira"], ["abertura_até_aberturaJira", "Min até Jira"],
-        [t => {const v = getCampo(t, "tempoparaconsiderar"); return v == null ? "" : v;}, "Tempo para considerar"],
+        [t => { const v = getCampo(t, "tempoparaconsiderar"); return v == null ? "" : v; }, "Tempo para considerar"],
         [t => t.jiraIssueKey ? (assumiuDepois(t) ? "Sim" : "Não") : "", "Assumiu após Jira"],
         ["dataFinalizacao", "Finalização"], ["lifetimeWorkingTime", "Vida útil (min)"],
         ["ticketIndevido", "Indevido"], ["motivoIndevido", "Motivo indevido"], ["categoria", "Categoria"],
         ["serviceNivel1", "Serviço N1"], ["serviceNivel2", "Serviço N2"], ["serviceNivel3", "Serviço N3"], ["portal", "Portal"]
       ];
-      const esc = v => {v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""') + '"';};
+      const esc = v => { v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""') + '"'; };
       const val = (t, c) => typeof c[0] === "function" ? c[0](t) : t[c[0]];
       const linhas = [cols.map(c => esc(c[1])).join(";")];
       rows.forEach(t => linhas.push(cols.map(c => esc(val(t, c))).join(";")));
       const p = n => String(n).padStart(2, "0");
       const d = new Date();
-      const blob = new Blob(["\uFEFF" + linhas.join("\r\n")], {type: "text/csv;charset=utf-8"});
+      const blob = new Blob(["\uFEFF" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `tickets-n2-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`;
@@ -2574,7 +2579,7 @@
       $("tbl-body").innerHTML = vis.map(t => {
         const aberto = !isFechado(t);
         const indevido = t.ticketIndevido === "Sim";
-        const tAssumir = toNum(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2);
+        const tAssumir = duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2);
         const mDir = minutosDirecionamento(t);
         const depois = assumiuDepois(t);
         return `<tr>
@@ -2597,7 +2602,7 @@
 
     function escapeHtml(v) {
       if (v == null) return "";
-      return String(v).replace(/[&<>"']/g, s => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[s]));
+      return String(v).replace(/[&<>"']/g, s => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[s]));
     }
 
     /* ================= DEMO ================= */
@@ -2638,7 +2643,7 @@
         const depois = temJira && Math.random() < 0.18;
         // prioridade da demo com distribuição realista (poucos Highest, mais Medium/Low)
         const urg = rnd(["Low", "Low", "Medium", "Medium", "Medium", "High", "High", "Highest"]);
-        const metaMin = {Highest: 120, High: 240, Medium: 360, Low: 480}[urg];
+        const metaMin = { Highest: 120, High: 240, Medium: 360, Low: 480 }[urg];
         // ~78% dos casos ficam dentro do prazo da faixa; o resto estoura
         const baseDirBruto = temJira ? diffMin(jiraData, fmt(ent)) : (fin ? diffMin(fin, fmt(ent)) : null);
         let dirAjustado = baseDirBruto;
@@ -2647,7 +2652,7 @@
           else if (Math.random() < 0.78) dirAjustado = Math.round(metaMin * (0.2 + Math.random() * 0.75)); // dentro
           else dirAjustado = Math.round(metaMin * (1.05 + Math.random() * 1.5)); // fora
         }
-        const hms = m => {m = Math.max(0, Math.round(m)); return `${Math.floor(m / 60)}:${pad(m % 60)}:${pad(Math.floor(Math.random() * 60))}`;};
+        const hms = m => { m = Math.max(0, Math.round(m)); return `${Math.floor(m / 60)}:${pad(m % 60)}:${pad(Math.floor(Math.random() * 60))}`; };
         out.push({
           ticketId: 48200 + i,
           subject: rnd(["Erro ao enviar proposta", "Robô não iniciou a disputa", "Cliente sem acesso ao painel", "Divergência em relatório", "Falha na sincronização do portal", "Dúvida sobre alerta de edital", "Documento não anexado", "Sessão expira ao logar"]),
@@ -2672,7 +2677,7 @@
           dataCaptura: fmt(new Date()),
           "abertura_até_aberturaJira": jiraData ? Math.round(diffMin(jiraData, fmt(ent))) : "",
           "N2_ate_aberturaJira": jiraData ? Math.round(diffMin(jiraData, fmt(assum))) : "",
-          "Abertura_até_assumir": assumirMin,
+          "Abertura_até_assumir": hms(assumirMin),
           "Assumiu _Depois_da_Criação do Jira?": temJira ? (depois ? "Sim" : "Não") : "Não",
           "Tempo_para_considerar": dirAjustado == null ? "" : hms(dirAjustado)
         });
