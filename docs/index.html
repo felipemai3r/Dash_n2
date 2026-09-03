@@ -1406,7 +1406,9 @@
           <div class="k-label">KPI 1 · % Resolvidos sem Desenvolvimento</div>
           <div class="k-value" id="kpi1-val">—</div>
           <div class="k-sub" id="kpi1-sub"></div>
-          <div class="k-bar"><i id="kpi1-bar" style="width:0%"></i></div>
+          <div class="k-bar"><i id="kpi1-bar" style="width:0%"></i><span class="meta-mark" style="left:36%"></span>
+          </div>
+          <div class="meta-tag" id="kpi1-meta"></div>
         </div>
         <div class="kpi hero">
           <div class="k-label">KPI 2 · SLA de Diagnóstico (por prioridade)</div>
@@ -1415,20 +1417,6 @@
           <div class="k-bar"><i id="kpi2-bar" style="width:0%"></i><span class="meta-mark" style="left:80%"></span>
           </div>
           <div class="meta-tag" id="kpi2-meta"></div>
-        </div>
-        <div class="kpi hero alt">
-          <div class="k-label">KPI 3 · % Resolvidos sem Desenvolvimento (total)</div>
-          <div class="k-value" id="kpi1t-val">—</div>
-          <div class="k-sub" id="kpi1t-sub"></div>
-          <div class="k-bar"><i id="kpi1t-bar" style="width:0%"></i></div>
-        </div>
-        <div class="kpi hero alt">
-          <div class="k-label">KPI 4 · SLA de Diagnóstico (sobre o total)</div>
-          <div class="k-value" id="kpi2t-val">—</div>
-          <div class="k-sub" id="kpi2t-sub"></div>
-          <div class="k-bar"><i id="kpi2t-bar" style="width:0%"></i><span class="meta-mark" style="left:80%"></span>
-          </div>
-          <div class="meta-tag" id="kpi2t-meta"></div>
         </div>
         <div class="kpi">
           <div class="k-label">Tempo médio pra assumir</div>
@@ -1544,12 +1532,7 @@
         <div class="chart-head">
           <div>
             <h3>Cumprimento do SLA por faixa de prioridade</h3>
-            <div class="p-sub" id="sla-sub">meta ≥ 80% dos chamados dentro do prazo · exceto indevidos · usa o "Tempo
-              para considerar" quando disponível</div>
-          </div>
-          <div class="toggle" id="sla-toggle">
-            <button data-ind="sem" class="on">Sem indevidos</button>
-            <button data-ind="com">Com indevidos</button>
+            <div class="p-sub" id="sla-sub"></div>
           </div>
         </div>
         <div class="kpi-grid" id="sla-cards" style="margin:6px 0 16px"></div>
@@ -1573,8 +1556,18 @@
 
       <div class="section-label"><span class="arrow">➔</span> Tempos por prioridade</div>
       <div class="panel">
-        <h3>Médias de atendimento por prioridade</h3>
-        <div class="p-sub">tempos médios do período, respeitando o percentil selecionado no filtro</div>
+        <div class="chart-head">
+          <div>
+            <h3>Médias de atendimento por prioridade</h3>
+            <div class="p-sub" id="prior-sub">tempos médios do período, respeitando o percentil selecionado no filtro
+            </div>
+          </div>
+          <div class="toggle" id="prior-toggle">
+            <button data-jira="" class="on">Todos</button>
+            <button data-jira="com">Com Jira</button>
+            <button data-jira="sem">Sem Jira</button>
+          </div>
+        </div>
         <div class="table-wrap" style="border:none">
           <table>
             <thead>
@@ -1681,13 +1674,14 @@
     </main>
 
     <footer>
-      Indicadores calculados na página conforme as regras oficiais do time. KPI 1 e KPI 2 excluem tickets indevidos do
-      numerador e do denominador; KPI 3 e KPI 4 são as mesmas métricas calculadas sobre o total, incluindo indevidos. O
-      SLA de Diagnóstico mede a % de chamados direcionados dentro do prazo da sua faixa de prioridade — Highest ≤ 2h,
-      Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h — com meta de ≥ 80%. Quando o campo "Tempo para considerar" vem preenchido no
-      ticket, ele é a fonte oficial do tempo de direcionamento; sem ele, vale o cálculo pelas datas. Quando um percentil
-      está selecionado no filtro, os tempos mais discrepantes são removidos apenas dos cálculos de média (os KPIs e
-      volumes não mudam). Datas em horário de Brasília.
+      Indicadores calculados na página conforme as regras oficiais do time (set/2026). A base dos KPIs é o total de
+      tickets do filtro, incluindo indevidos e duplicados, com uma única exclusão: indevidos por "3. Dúvida Funcional /
+      Treinamento" ficam fora por completo. KPI 1 (% Resolvidos sem Desenvolvimento) conta como resolvido todo ticket
+      sem Jira dessa base; meta abaixo de 36%. KPI 2 (SLA de Diagnóstico) mede a % de chamados direcionados dentro do
+      prazo da sua faixa de prioridade — Urgente ≤ 2h, Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h — com meta de ≥ 80%. Quando o
+      campo "Tempo para considerar" vem preenchido no ticket, ele é a fonte oficial do tempo de direcionamento; sem ele,
+      vale o cálculo pelas datas. Quando um percentil está selecionado no filtro, os tempos mais discrepantes são
+      removidos apenas dos cálculos de média (os KPIs e volumes não mudam). Datas em horário de Brasília.
     </footer>
   </div>
 
@@ -1709,7 +1703,7 @@
       histMode: "day",
       percentil: 100,
       drill: null,
-      slaComIndevidos: false,
+      priorJira: "",
       svcLvl: "serviceNivel1",
       tableLimit: CONFIG.TABLE_PAGE,
       demo: false
@@ -1792,7 +1786,7 @@
       const dir = t.jiraIssueKey ? t.dataCriacaoJira : t.dataFinalizacao;
       return diffMin(dir, t.dataEntradaN2);
     }
-    // Meta de SLA de Diagnóstico por faixa de prioridade (minutos): Highest 2h / Alta 4h / Média 6h / Baixa 8h
+    // Meta de SLA de Diagnóstico por faixa de prioridade (minutos): Urgente (Highest) 2h / Alta 4h / Média 6h / Baixa 8h
     const SLA_META_MIN = { highest: 120, alta: 240, media: 360, baixa: 480 };
     const SLA_META_LABEL = { highest: "≤ 2h", alta: "≤ 4h", media: "≤ 6h", baixa: "≤ 8h" };
     const SLA_META_PCT = 80; // meta oficial: ≥80% dentro do prazo
@@ -1932,37 +1926,43 @@
       finally { btn.classList.remove("loading"); btn.disabled = false; }
     });
 
+    /* ================= REGRAS DE BASE DOS KPIs ================= */
+    // Motivo de indevido com tratamento especial (comparação tolerante a acento/caixa/numeração)
+    function motivoNorm(t) { return normKey(t.motivoIndevido || ""); }
+    // "3. Dúvida Funcional / Treinamento": ÚNICA exclusão — sai por completo da base de todos os KPIs
+    function ehDuvidaFuncional(t) { return motivoNorm(t).includes("duvidafuncional"); }
+    // Base oficial dos KPIs: TODOS os tickets (indevidos e duplicados inclusos), exceto dúvida funcional
+    function baseKpi(tickets) { return tickets.filter(t => !ehDuvidaFuncional(t)); }
+    // Resolvido sem desenvolvimento: sem Jira
+    function resolvidoSemDev(t) { return !t.jiraIssueKey; }
+    const KPI1_META_PCT = 36; // meta oficial do KPI 1: abaixo de 36%
+
     /* ================= CÁLCULOS ================= */
     function calc(tickets) {
-      const validos = tickets.filter(t => t.ticketIndevido !== "Sim");
+      const validos = baseKpi(tickets);                       // base dos KPIs (sem dúvida funcional)
       const indevidos = tickets.filter(t => t.ticketIndevido === "Sim");
+      const duvidas = tickets.filter(ehDuvidaFuncional);
       const comJira = tickets.filter(t => !!t.jiraIssueKey);
       const semJira = tickets.filter(t => !t.jiraIssueKey);
       const abertos = tickets.filter(t => !isFechado(t));
 
-      // KPI 1 — % resolvido sem desenvolvimento (sobre válidos)
-      let kpi1 = null;
+      // KPI 1 — % resolvido sem desenvolvimento: sem Jira, sobre a base (sem dúvida funcional)
+      let kpi1 = null, kpi1Num = 0;
       if (validos.length) {
-        kpi1 = validos.filter(t => !t.jiraIssueKey).length / validos.length * 100;
+        kpi1Num = validos.filter(resolvidoSemDev).length;
+        kpi1 = kpi1Num / validos.length * 100;
       }
 
-      // KPI 2 — SLA de diagnóstico por prioridade: dentro do prazo da faixa (sobre válidos)
-      let kpi2 = null;
+      // KPI 2 — SLA de diagnóstico por prioridade: dentro do prazo da faixa, sobre a mesma base
+      let kpi2 = null, kpi2Num = 0;
       if (validos.length) {
-        const ok = validos.filter(t => dentroSLA(t) === true).length;
-        kpi2 = ok / validos.length * 100;
+        kpi2Num = validos.filter(t => dentroSLA(t) === true).length;
+        kpi2 = kpi2Num / validos.length * 100;
       }
 
-      // Mesmos indicadores calculados sobre o TOTAL de tickets do filtro (sem excluir indevidos)
       const fechados = tickets.filter(isFechado);
       const novos = tickets.filter(t => String(t.status || "").trim().toLowerCase() === "novo");
       const depJira = tickets.filter(assumiuDepois);
-      let kpi1Total = null, kpi2Total = null;
-      if (tickets.length) {
-        kpi1Total = tickets.filter(t => !t.jiraIssueKey).length / tickets.length * 100;
-        const okT = tickets.filter(t => dentroSLA(t) === true).length;
-        kpi2Total = okT / tickets.length * 100;
-      }
 
       // tempos médios (com corte de percentil, se selecionado)
       const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
@@ -1975,12 +1975,13 @@
       const tLifetime = media(col(t => toNum(t.lifetimeWorkingTime)));
 
       return {
-        validos, indevidos, comJira, semJira, abertos, fechados, novos, depJira, kpi1, kpi2, kpi1Total, kpi2Total,
+        validos, indevidos, duvidas, comJira, semJira, abertos, fechados, novos, depJira,
+        kpi1, kpi1Num, kpi2, kpi2Num,
         tAssumir, tAteJira, tPessoaJira, tResolucao, tLifetime
       };
     }
 
-    // Normaliza a prioridade do ticket em 4 faixas (Low/Medium/High/Highest)
+    // Normaliza a prioridade do ticket em 4 faixas (Low/Medium/High/Highest = Urgente)
     function prioDe(t) {
       const u = String(t.urgency || "").trim().toLowerCase();
       if (u === "highest" || u === "crítica" || u === "critica" || u === "critical" || u === "altíssima" || u === "altissima") return "highest";
@@ -2000,7 +2001,7 @@
       const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
       const col = (arr, fn) => arr.map(fn).filter(v => v != null && !isNaN(v) && v >= 0);
       return [...map.entries()].map(([nome, ts]) => {
-        const validos = ts.filter(t => t.ticketIndevido !== "Sim");
+        const validos = baseKpi(ts);
         const comJira = ts.filter(t => !!t.jiraIssueKey);
         const highests = ts.filter(t => prioDe(t) === "highest");
         const altas = ts.filter(t => prioDe(t) === "alta");
@@ -2008,11 +2009,8 @@
         const baixas = ts.filter(t => prioDe(t) === "baixa");
         let kpi1 = null, sla90 = null;
         if (validos.length) {
-          kpi1 = validos.filter(t => !t.jiraIssueKey).length / validos.length * 100;
-          sla90 = validos.filter(t => {
-            const m = minutosDirecionamento(t);
-            return m != null && m <= 90;
-          }).length / validos.length * 100;
+          kpi1 = validos.filter(resolvidoSemDev).length / validos.length * 100;
+          sla90 = validos.filter(t => dentroSLA(t) === true).length / validos.length * 100;
         }
         return {
           nome,
@@ -2021,7 +2019,7 @@
           comJira: comJira.length,
           semJira: ts.length - comJira.length,
           depJira: ts.filter(assumiuDepois).length,
-          indevidos: ts.length - validos.length,
+          indevidos: ts.filter(t => t.ticketIndevido === "Sim").length,
           kpi1, sla90,
           tAssumir: media(col(ts, t => duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))),
           tJira: media(col(ts, t => minutosAteJira(t))),
@@ -2046,15 +2044,15 @@
       { k: "semJira", label: "Sem Jira", def: 1, g: "Geral" },
       { k: "indevidos", label: "Indevidos", def: 1, g: "Geral" },
       { k: "kpi1", label: "% sem dev", def: 1, g: "Indicadores", fmt: "pct", best: "max" },
-      { k: "sla90", label: "SLA 90 min", def: 1, g: "Indicadores", fmt: "pct", best: "max" },
+      { k: "sla90", label: "SLA diagnóstico", def: 1, g: "Indicadores", fmt: "pct", best: "max" },
       { k: "tAssumir", label: "Média até assumir", def: 1, g: "Tempos", fmt: "min", best: "min" },
       { k: "tJira", label: "Média até criar Jira", def: 1, g: "Tempos", fmt: "min", best: "min" },
       { k: "tResolucao", label: "Média até finalizar", def: 1, g: "Tempos", fmt: "min", best: "min" },
-      { k: "pHighest", label: "Qtd. prioridade Highest", def: 0, g: "Prioridades" },
+      { k: "pHighest", label: "Qtd. prioridade Urgente", def: 0, g: "Prioridades" },
       { k: "pAlta", label: "Qtd. prioridade Alta", def: 0, g: "Prioridades" },
       { k: "pMedia", label: "Qtd. prioridade Média", def: 0, g: "Prioridades" },
       { k: "pBaixa", label: "Qtd. prioridade Baixa", def: 0, g: "Prioridades" },
-      { k: "tDirHighest", label: "Direcionamento Highest", def: 0, g: "Prioridades", fmt: "min", best: "min" },
+      { k: "tDirHighest", label: "Direcionamento Urgente", def: 0, g: "Prioridades", fmt: "min", best: "min" },
       { k: "tDirAlta", label: "Direcionamento Alta", def: 0, g: "Prioridades", fmt: "min", best: "min" },
       { k: "tDirMedia", label: "Direcionamento Média", def: 0, g: "Prioridades", fmt: "min", best: "min" },
       { k: "tDirBaixa", label: "Direcionamento Baixa", def: 0, g: "Prioridades", fmt: "min", best: "min" }
@@ -2155,7 +2153,7 @@
     /* SLA por faixa de prioridade — linhas clicáveis levam à listagem */
     // Base do SLA conforme o toggle: sem indevidos (padrão, regra oficial) ou com indevidos
     function baseSLA() {
-      return S.slaComIndevidos ? S.view : S.view.filter(t => t.ticketIndevido !== "Sim");
+      return baseKpi(S.view); // mesma base dos KPIs: todos os tickets, exceto dúvida funcional
     }
     function calcSlaFaixas() {
       const base = baseSLA();
@@ -2170,12 +2168,11 @@
 
     function renderSlaFaixas() {
       const ordem = ["highest", "alta", "media", "baixa"];
-      const nome = { highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa" };
+      const nome = { highest: "Urgente", alta: "Alta", media: "Média", baixa: "Baixa" };
       const sf = calcSlaFaixas();
-      const comInd = S.slaComIndevidos;
       const fmtPct = p => p == null ? "sem dados" : p.toFixed(1).replace(".", ",") + "%";
 
-      $("sla-sub").textContent = `meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · ${comInd ? "incluindo indevidos" : "exceto indevidos"} · usa o "Tempo para considerar" quando disponível`;
+      $("sla-sub").textContent = `meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto dúvida funcional / treinamento · usa o "Tempo para considerar" quando disponível`;
 
       // cards por prioridade (mesma linguagem visual dos KPIs)
       $("sla-cards").innerHTML = ordem.map(f => {
@@ -2214,29 +2211,17 @@
     </tr>`;
       }).join("");
 
-      // linha de conferência: soma das faixas × base escolhida (explica indevidos e sem prioridade)
+      // linha de conferência: soma das faixas × base (explica duplicados e sem prioridade)
       const base = sf.__base;
       const somaFaixas = ordem.reduce((a, f) => a + sf[f].total, 0);
       const foraDeFaixa = base.length - somaFaixas;
-      const nIndevidos = S.view.filter(t => t.ticketIndevido === "Sim").length;
+      const nDuv = S.view.filter(ehDuvidaFuncional).length;
       let rodape = `<tr class="sla-foot"><td colspan="7">`;
-      rodape += comInd
-        ? `Base do SLA: ${base.length} tickets, incluindo os ${nIndevidos} indevidos do período.`
-        : `Base do SLA: ${base.length} tickets válidos (indevidos excluídos${nIndevidos ? ` — ${nIndevidos} no período` : ""}).`;
+      rodape += `Base do SLA: ${base.length} tickets (indevidos e duplicados inclusos${nDuv ? `; ${nDuv} de dúvida funcional / treinamento excluído${nDuv > 1 ? "s" : ""}` : "; nenhum de dúvida funcional no período"}).`;
       if (foraDeFaixa > 0) rodape += ` ${foraDeFaixa} sem faixa de prioridade reconhecida ficam fora das linhas acima.`;
       rodape += `</td></tr>`;
       $("tbl-sla-body").innerHTML = (linhas + rodape) || '<tr><td colspan="7"><div class="empty">Sem dados no período.</div></td></tr>';
     }
-
-    /* toggle com/sem indevidos da seção de SLA */
-    $("sla-toggle").addEventListener("click", e => {
-      const b = e.target.closest("button"); if (!b) return;
-      S.slaComIndevidos = b.dataset.ind === "com";
-      document.querySelectorAll("#sla-toggle button").forEach(x => x.classList.toggle("on", x === b));
-      renderSlaFaixas();
-      // o recorte da listagem segue a mesma base do toggle, então re-renderiza se houver drill ativo
-      if (S.drill) { renderChipDrill(); renderTabela(); }
-    });
 
     /* clique nos cards de prioridade → mesmos recortes da tabela */
     $("sla-cards").addEventListener("click", e => {
@@ -2251,7 +2236,7 @@
     });
 
     /* clique nas células do SLA → filtra a listagem final e rola até ela */
-    const PRIO_NOME = { highest: "Highest", alta: "Alta", media: "Média", baixa: "Baixa", todos: "todas" };
+    const PRIO_NOME = { highest: "Urgente", alta: "Alta", media: "Média", baixa: "Baixa", todos: "todas" };
     const SLA_NOME = { dentro: "dentro do prazo", fora: "fora do prazo", todos: "" };
     function aplicarDrill(prio, sla) {
       S.drill = { prio, sla };
@@ -2272,7 +2257,7 @@
       if (S.drill.prio && S.drill.prio !== "todos") partes.push(`prioridade ${PRIO_NOME[S.drill.prio]}`);
       if (S.drill.sla && S.drill.sla !== "todos") partes.push(SLA_NOME[S.drill.sla]);
       const txt = partes.length ? partes.join(" · ") : "todos os tickets da faixa";
-      const indTxt = S.slaComIndevidos ? "incluindo indevidos" : "exceto indevidos";
+      const indTxt = "exceto dúvida funcional";
       box.style.display = "block";
       box.innerHTML = `<span class="drill-tag">Listando: ${escapeHtml(txt)} (${indTxt}) <span class="x" id="drill-x" title="Remover este recorte">×</span></span>`;
       $("drill-x").addEventListener("click", limparDrill);
@@ -2285,14 +2270,20 @@
     function renderPrioridades() {
       const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
       const col = (arr, fn) => arr.map(fn).filter(v => v != null && !isNaN(v) && v >= 0);
+      // recorte com/sem Jira escolhido no toggle da seção
+      let base = S.view;
+      if (S.priorJira === "com") base = base.filter(t => !!t.jiraIssueKey);
+      if (S.priorJira === "sem") base = base.filter(t => !t.jiraIssueKey);
+      $("prior-sub").textContent = "tempos médios do período, respeitando o percentil selecionado no filtro" +
+        (S.priorJira === "com" ? " · só tickets com Jira" : S.priorJira === "sem" ? " · só tickets sem Jira" : "");
       const grupos = new Map();
-      S.view.forEach(t => {
+      base.forEach(t => {
         const u = t.urgency || "(sem prioridade)";
         if (!grupos.has(u)) grupos.set(u, []);
         grupos.get(u).push(t);
       });
       const ordem = { "Highest": 0, "Highest ": 0, "High": 1, "Alta": 1, "Medium": 2, "Média": 2, "Low": 3, "Baixa": 3 };
-      const nomeP = u => ({ Highest: "Highest", High: "Alta", Medium: "Média", Low: "Baixa" })[u] || u;
+      const nomeP = u => ({ Highest: "Urgente", High: "Alta", Medium: "Média", Low: "Baixa" })[u] || u;
       const linhas = [...grupos.entries()].sort((a, b) => (ordem[a[0]] ?? 9) - (ordem[b[0]] ?? 9) || b[1].length - a[1].length);
       $("tbl-prior-body").innerHTML = linhas.map(([u, ts]) => {
         const ab = ts.filter(t => !isFechado(t)).length;
@@ -2302,12 +2293,20 @@
       <td>${ab}</td>
       <td>${ts.length - ab}</td>
       <td>${fmtMin(media(col(ts, t => duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2))))}</td>
-      <td>${fmtMin(media(col(ts, t => minutosAteJira(t))))}</td>
+      <td>${S.priorJira === "sem" ? "—" : fmtMin(media(col(ts, t => minutosAteJira(t))))}</td>
       <td>${fmtMin(media(col(ts, t => t.dataFinalizacao ? diffMin(t.dataFinalizacao, t.dataEntradaN2) : null)))}</td>
       <td>${fmtMin(media(col(ts, t => toNum(t.lifetimeWorkingTime))))}</td>
     </tr>`;
-      }).join("") || '<tr><td colspan="8"><div class="empty">Sem dados no período.</div></td></tr>';
+      }).join("") || '<tr><td colspan="8"><div class="empty">Sem dados no recorte selecionado.</div></td></tr>';
     }
+
+    /* toggle com/sem Jira da tabela de tempos por prioridade */
+    $("prior-toggle").addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      S.priorJira = b.dataset.jira;
+      document.querySelectorAll("#prior-toggle button").forEach(x => x.classList.toggle("on", x === b));
+      renderPrioridades();
+    });
 
     function contagem(tickets, campo) {
       const map = new Map();
@@ -2328,33 +2327,31 @@
 
       // KPIs
       const pct = v => v == null ? "sem dados" : v.toFixed(1).replace(".", ",") + "%";
-      // aplica cor de status (verde/laranja) e a tag de meta ≥80% nos KPIs de SLA
-      const aplicaMeta = (barId, tagId, val) => {
+      // aplica cor de status (verde/laranja) e a tag de meta. sentido "max" = bate se >= meta; "min" = bate se < meta
+      const aplicaMeta = (barId, tagId, val, meta, sentido) => {
         const bar = $(barId), tag = $(tagId);
         bar.style.width = (val ?? 0) + "%";
         bar.classList.remove("hit", "miss");
         if (val == null) { tag.className = "meta-tag"; tag.textContent = ""; return; }
-        const bate = val >= SLA_META_PCT;
+        const bate = sentido === "min" ? val < meta : val >= meta;
+        const simbolo = sentido === "min" ? "<" : "≥";
+        const dif = Math.abs(val - meta).toFixed(1).replace(".", ",");
         bar.classList.add(bate ? "hit" : "miss");
         tag.className = "meta-tag " + (bate ? "ok" : "no");
-        tag.innerHTML = `<span class="dot" style="background:currentColor"></span>Meta ≥ ${SLA_META_PCT}% · ${bate ? "atingida" : `faltam ${(SLA_META_PCT - val).toFixed(1).replace(".", ",")} p.p.`}`;
+        tag.innerHTML = `<span class="dot" style="background:currentColor"></span>Meta ${simbolo} ${meta}% · ${bate ? "atingida" : (sentido === "min" ? `${dif} p.p. acima` : `faltam ${dif} p.p.`)}`;
       };
 
       $("kpi1-val").textContent = pct(c.kpi1);
-      $("kpi1-sub").textContent = c.validos.length ? `${c.validos.filter(x => !x.jiraIssueKey).length} de ${c.validos.length} válidos (exceto indevidos)` : "nenhum ticket válido no filtro";
-      $("kpi1-bar").style.width = (c.kpi1 ?? 0) + "%";
+      $("kpi1-sub").textContent = c.validos.length
+        ? `${c.kpi1Num} de ${c.validos.length} tickets · exceto dúvida funcional / treinamento`
+        : "nenhum ticket na base do filtro";
+      aplicaMeta("kpi1-bar", "kpi1-meta", c.kpi1, KPI1_META_PCT, "min");
 
       $("kpi2-val").textContent = pct(c.kpi2);
-      $("kpi2-sub").textContent = c.validos.length ? `dentro do prazo da faixa · ${c.validos.length} válidos (exceto indevidos)` : "nenhum ticket válido no filtro";
-      aplicaMeta("kpi2-bar", "kpi2-meta", c.kpi2);
-
-      $("kpi1t-val").textContent = pct(c.kpi1Total);
-      $("kpi1t-sub").textContent = t.length ? `${c.semJira.length} de ${t.length} tickets, incluindo indevidos` : "nenhum ticket no filtro";
-      $("kpi1t-bar").style.width = (c.kpi1Total ?? 0) + "%";
-
-      $("kpi2t-val").textContent = pct(c.kpi2Total);
-      $("kpi2t-sub").textContent = t.length ? `dentro do prazo da faixa · ${t.length} tickets no total` : "nenhum ticket no filtro";
-      aplicaMeta("kpi2t-bar", "kpi2t-meta", c.kpi2Total);
+      $("kpi2-sub").textContent = c.validos.length
+        ? `${c.kpi2Num} de ${c.validos.length} dentro do prazo da faixa · exceto dúvida funcional`
+        : "nenhum ticket na base do filtro";
+      aplicaMeta("kpi2-bar", "kpi2-meta", c.kpi2, SLA_META_PCT, "max");
 
       $("kpi3-val").textContent = fmtMin(c.tAssumir);
       $("kpi4-val").textContent = fmtMin(c.tLifetime);
@@ -2511,8 +2508,8 @@
       // drill vindo da tabela de SLA por prioridade
       if (S.drill) {
         if (S.drill.prio && S.drill.prio !== "todos") rows = rows.filter(t => prioDe(t) === S.drill.prio);
-        // o recorte segue a mesma base do toggle da seção de SLA
-        if (!S.slaComIndevidos) rows = rows.filter(t => t.ticketIndevido !== "Sim");
+        // o recorte segue a mesma base do SLA/KPIs: sem dúvida funcional
+        rows = rows.filter(t => !ehDuvidaFuncional(t));
         if (S.drill.sla === "dentro") rows = rows.filter(t => dentroSLA(t) === true);
         if (S.drill.sla === "fora") rows = rows.filter(t => dentroSLA(t) !== true);
       }
@@ -2612,7 +2609,7 @@
       const svc1 = ["Captação", "Disputa", "Gestão de contratos", "Cadastro", "Documentos"];
       const svc2 = ["ComprasNet", "BEC", "Licitações-e", "Portal de Compras", "BLL"];
       const svc3 = ["Robô de disputa", "Alertas", "Envio de proposta", "Sincronização", "Relatórios"];
-      const motivos = ["Deveria ser N1", "Duplicado", "Sem retorno do cliente", "Fora de escopo", "Erro de triagem"];
+      const motivos = ["1. Ticket Duplicado", "2. Deveria ser N1", "3. Dúvida Funcional / Treinamento", "3. Dúvida Funcional / Treinamento", "4. Sem retorno do cliente", "5. Fora de escopo"];
       const status = ["Novo", "Em Atendimento", "Aguardando", "Resolvido", "Fechado"];
       const clientes = ["Prefeitura de Blumenau", "Construtora Alfa", "Distribuidora Sul", "Hospital Regional", "TechFornec LTDA", "Coop Agro Vale"];
       const rnd = (a) => a[Math.floor(Math.random() * a.length)];
