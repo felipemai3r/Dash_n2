@@ -1675,13 +1675,14 @@
 
     <footer>
       Indicadores calculados na página conforme as regras oficiais do time (set/2026). A base dos KPIs é o total de
-      tickets do filtro, incluindo indevidos e duplicados, com uma única exclusão: indevidos por "3. Dúvida Funcional /
-      Treinamento" ficam fora por completo. KPI 1 (% Resolvidos sem Desenvolvimento) conta como resolvido todo ticket
-      sem Jira dessa base; meta abaixo de 36%. KPI 2 (SLA de Diagnóstico) mede a % de chamados direcionados dentro do
-      prazo da sua faixa de prioridade — Urgente ≤ 2h, Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h — com meta de ≥ 80%. Quando o
-      campo "Tempo para considerar" vem preenchido no ticket, ele é a fonte oficial do tempo de direcionamento; sem ele,
-      vale o cálculo pelas datas. Quando um percentil está selecionado no filtro, os tempos mais discrepantes são
-      removidos apenas dos cálculos de média (os KPIs e volumes não mudam). Datas em horário de Brasília.
+      tickets do filtro, incluindo indevidos de qualquer categoria (Grafana, dúvida técnica/funcional, falta de
+      informação etc.), com uma única exclusão: os marcados como "Ticket Duplicado" ficam fora por completo. KPI 1 (%
+      Resolvidos sem Desenvolvimento) conta como resolvido todo ticket sem Jira dessa base; meta abaixo de 36%. KPI 2
+      (SLA de Diagnóstico) mede a % de chamados direcionados dentro do prazo da sua faixa de prioridade — Urgente ≤ 2h,
+      Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h — com meta de ≥ 80%. Quando o campo "Tempo para considerar" vem preenchido no
+      ticket, ele é a fonte oficial do tempo de direcionamento; sem ele, vale o cálculo pelas datas. Quando um percentil
+      está selecionado no filtro, os tempos mais discrepantes são removidos apenas dos cálculos de média (os KPIs e
+      volumes não mudam). Datas em horário de Brasília.
     </footer>
   </div>
 
@@ -1929,19 +1930,20 @@
     /* ================= REGRAS DE BASE DOS KPIs ================= */
     // Motivo de indevido com tratamento especial (comparação tolerante a acento/caixa/numeração)
     function motivoNorm(t) { return normKey(t.motivoIndevido || ""); }
-    // "3. Dúvida Funcional / Treinamento": ÚNICA exclusão — sai por completo da base de todos os KPIs
-    function ehDuvidaFuncional(t) { return motivoNorm(t).includes("duvidafuncional"); }
-    // Base oficial dos KPIs: TODOS os tickets (indevidos e duplicados inclusos), exceto dúvida funcional
-    function baseKpi(tickets) { return tickets.filter(t => !ehDuvidaFuncional(t)); }
+    // "Ticket Duplicado": ÚNICA exclusão — sai por completo da base de todos os KPIs
+    function ehDuplicado(t) { return motivoNorm(t).includes("duplicado"); }
+    // Base oficial dos KPIs: TODOS os tickets — indevidos inclusos (Grafana, dúvida técnica/funcional,
+    // falta de informação e qualquer outra categoria) — exceto os duplicados
+    function baseKpi(tickets) { return tickets.filter(t => !ehDuplicado(t)); }
     // Resolvido sem desenvolvimento: sem Jira
     function resolvidoSemDev(t) { return !t.jiraIssueKey; }
     const KPI1_META_PCT = 36; // meta oficial do KPI 1: abaixo de 36%
 
     /* ================= CÁLCULOS ================= */
     function calc(tickets) {
-      const validos = baseKpi(tickets);                       // base dos KPIs (sem dúvida funcional)
+      const validos = baseKpi(tickets);                       // base dos KPIs (sem duplicados)
       const indevidos = tickets.filter(t => t.ticketIndevido === "Sim");
-      const duvidas = tickets.filter(ehDuvidaFuncional);
+      const duplicados = tickets.filter(ehDuplicado);
       const comJira = tickets.filter(t => !!t.jiraIssueKey);
       const semJira = tickets.filter(t => !t.jiraIssueKey);
       const abertos = tickets.filter(t => !isFechado(t));
@@ -1975,7 +1977,7 @@
       const tLifetime = media(col(t => toNum(t.lifetimeWorkingTime)));
 
       return {
-        validos, indevidos, duvidas, comJira, semJira, abertos, fechados, novos, depJira,
+        validos, indevidos, duplicados, comJira, semJira, abertos, fechados, novos, depJira,
         kpi1, kpi1Num, kpi2, kpi2Num,
         tAssumir, tAteJira, tPessoaJira, tResolucao, tLifetime
       };
@@ -2153,7 +2155,7 @@
     /* SLA por faixa de prioridade — linhas clicáveis levam à listagem */
     // Base do SLA conforme o toggle: sem indevidos (padrão, regra oficial) ou com indevidos
     function baseSLA() {
-      return baseKpi(S.view); // mesma base dos KPIs: todos os tickets, exceto dúvida funcional
+      return baseKpi(S.view); // mesma base dos KPIs: todos os tickets, exceto duplicados
     }
     function calcSlaFaixas() {
       const base = baseSLA();
@@ -2172,7 +2174,7 @@
       const sf = calcSlaFaixas();
       const fmtPct = p => p == null ? "sem dados" : p.toFixed(1).replace(".", ",") + "%";
 
-      $("sla-sub").textContent = `meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto dúvida funcional / treinamento · usa o "Tempo para considerar" quando disponível`;
+      $("sla-sub").textContent = `meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto duplicados · usa o "Tempo para considerar" quando disponível`;
 
       // cards por prioridade (mesma linguagem visual dos KPIs)
       $("sla-cards").innerHTML = ordem.map(f => {
@@ -2215,9 +2217,9 @@
       const base = sf.__base;
       const somaFaixas = ordem.reduce((a, f) => a + sf[f].total, 0);
       const foraDeFaixa = base.length - somaFaixas;
-      const nDuv = S.view.filter(ehDuvidaFuncional).length;
+      const nDup = S.view.filter(ehDuplicado).length;
       let rodape = `<tr class="sla-foot"><td colspan="7">`;
-      rodape += `Base do SLA: ${base.length} tickets (indevidos e duplicados inclusos${nDuv ? `; ${nDuv} de dúvida funcional / treinamento excluído${nDuv > 1 ? "s" : ""}` : "; nenhum de dúvida funcional no período"}).`;
+      rodape += `Base do SLA: ${base.length} tickets (indevidos de todas as outras categorias inclusos${nDup ? `; ${nDup} duplicado${nDup > 1 ? "s" : ""} excluído${nDup > 1 ? "s" : ""}` : "; nenhum duplicado no período"}).`;
       if (foraDeFaixa > 0) rodape += ` ${foraDeFaixa} sem faixa de prioridade reconhecida ficam fora das linhas acima.`;
       rodape += `</td></tr>`;
       $("tbl-sla-body").innerHTML = (linhas + rodape) || '<tr><td colspan="7"><div class="empty">Sem dados no período.</div></td></tr>';
@@ -2257,7 +2259,7 @@
       if (S.drill.prio && S.drill.prio !== "todos") partes.push(`prioridade ${PRIO_NOME[S.drill.prio]}`);
       if (S.drill.sla && S.drill.sla !== "todos") partes.push(SLA_NOME[S.drill.sla]);
       const txt = partes.length ? partes.join(" · ") : "todos os tickets da faixa";
-      const indTxt = "exceto dúvida funcional";
+      const indTxt = "exceto duplicados";
       box.style.display = "block";
       box.innerHTML = `<span class="drill-tag">Listando: ${escapeHtml(txt)} (${indTxt}) <span class="x" id="drill-x" title="Remover este recorte">×</span></span>`;
       $("drill-x").addEventListener("click", limparDrill);
@@ -2343,13 +2345,13 @@
 
       $("kpi1-val").textContent = pct(c.kpi1);
       $("kpi1-sub").textContent = c.validos.length
-        ? `${c.kpi1Num} de ${c.validos.length} tickets · exceto dúvida funcional / treinamento`
+        ? `${c.kpi1Num} de ${c.validos.length} tickets · exceto ticket duplicado`
         : "nenhum ticket na base do filtro";
       aplicaMeta("kpi1-bar", "kpi1-meta", c.kpi1, KPI1_META_PCT, "min");
 
       $("kpi2-val").textContent = pct(c.kpi2);
       $("kpi2-sub").textContent = c.validos.length
-        ? `${c.kpi2Num} de ${c.validos.length} dentro do prazo da faixa · exceto dúvida funcional`
+        ? `${c.kpi2Num} de ${c.validos.length} dentro do prazo da faixa · exceto duplicados`
         : "nenhum ticket na base do filtro";
       aplicaMeta("kpi2-bar", "kpi2-meta", c.kpi2, SLA_META_PCT, "max");
 
@@ -2508,8 +2510,8 @@
       // drill vindo da tabela de SLA por prioridade
       if (S.drill) {
         if (S.drill.prio && S.drill.prio !== "todos") rows = rows.filter(t => prioDe(t) === S.drill.prio);
-        // o recorte segue a mesma base do SLA/KPIs: sem dúvida funcional
-        rows = rows.filter(t => !ehDuvidaFuncional(t));
+        // o recorte segue a mesma base do SLA/KPIs: sem duplicados
+        rows = rows.filter(t => !ehDuplicado(t));
         if (S.drill.sla === "dentro") rows = rows.filter(t => dentroSLA(t) === true);
         if (S.drill.sla === "fora") rows = rows.filter(t => dentroSLA(t) !== true);
       }
