@@ -647,6 +647,18 @@
       border-top-color: var(--red)
     }
 
+    .count.t-dup {
+      border-top-color: var(--midnight)
+    }
+
+    .count.t-time {
+      border-top-color: var(--gulf)
+    }
+
+    .count .c-num.small {
+      font-size: 19px
+    }
+
     .count .c-sub {
       font-size: 11px;
       color: var(--ink-faint);
@@ -1401,34 +1413,19 @@
 
     <main>
       <div class="section-label"><span class="arrow">➔</span> Indicadores do time</div>
+      <div class="p-sub" id="sla-sub" style="margin:-6px 0 14px"></div>
       <div class="kpi-grid">
         <div class="kpi hero">
-          <div class="k-label">KPI 1 · % Resolvidos sem Desenvolvimento</div>
+          <div class="k-label">KPI 1*</div>
           <div class="k-value" id="kpi1-val">—</div>
           <div class="k-sub" id="kpi1-sub"></div>
           <div class="k-bar"><i id="kpi1-bar" style="width:0%"></i><span class="meta-mark" style="left:36%"></span>
           </div>
           <div class="meta-tag" id="kpi1-meta"></div>
         </div>
-        <div class="kpi hero">
-          <div class="k-label">KPI 2 · SLA de Diagnóstico (por prioridade)</div>
-          <div class="k-value" id="kpi2-val">—</div>
-          <div class="k-sub" id="kpi2-sub"></div>
-          <div class="k-bar"><i id="kpi2-bar" style="width:0%"></i><span class="meta-mark" style="left:80%"></span>
-          </div>
-          <div class="meta-tag" id="kpi2-meta"></div>
-        </div>
-        <div class="kpi">
-          <div class="k-label">Tempo médio pra assumir</div>
-          <div class="k-value" id="kpi3-val" style="color:var(--gulf)">—</div>
-          <div class="k-sub">da entrada no N2 até alguém assumir</div>
-        </div>
-        <div class="kpi">
-          <div class="k-label">Tempo médio de vida útil</div>
-          <div class="k-value" id="kpi4-val" style="color:var(--gulf)">—</div>
-          <div class="k-sub">lifetime working time médio por ticket</div>
-        </div>
+        <div id="sla-cards" style="display:contents"></div>
       </div>
+      <div class="p-sub" id="sla-foot-note" style="margin-top:10px"></div>
 
       <div class="section-label"><span class="arrow">➔</span> Volumes</div>
       <div class="count-grid">
@@ -1467,8 +1464,18 @@
         </div>
         <div class="count t-bad">
           <div class="c-num" id="c-bad">—</div>
-          <div class="c-label">Indevidos</div>
+          <div class="c-label">Indevidos†</div>
           <div class="c-sub" id="c-bad-sub"></div>
+        </div>
+        <div class="count t-dup">
+          <div class="c-num" id="c-dup">—</div>
+          <div class="c-label">Duplicados†</div>
+          <div class="c-sub" id="c-dup-sub"></div>
+        </div>
+        <div class="count t-time">
+          <div class="c-num small" id="c-tassumir">—</div>
+          <div class="c-label">Tempo médio pra assumir</div>
+          <div class="c-sub">da entrada no N2 até alguém assumir</div>
         </div>
       </div>
 
@@ -1523,33 +1530,6 @@
               <tr></tr>
             </thead>
             <tbody id="tbl-pessoas-body"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="section-label"><span class="arrow">➔</span> SLA de Diagnóstico por prioridade</div>
-      <div class="panel">
-        <div class="chart-head">
-          <div>
-            <h3>Cumprimento do SLA por faixa de prioridade</h3>
-            <div class="p-sub" id="sla-sub"></div>
-          </div>
-        </div>
-        <div class="kpi-grid" id="sla-cards" style="margin:6px 0 16px"></div>
-        <div class="table-wrap" style="border:none">
-          <table>
-            <thead>
-              <tr>
-                <th>Prioridade</th>
-                <th>Prazo (SLA)</th>
-                <th>Chamados</th>
-                <th>Dentro do prazo</th>
-                <th>Fora do prazo</th>
-                <th>% no prazo</th>
-                <th style="min-width:170px">Meta ≥ 80%</th>
-              </tr>
-            </thead>
-            <tbody id="tbl-sla-body"></tbody>
           </table>
         </div>
       </div>
@@ -1671,18 +1651,64 @@
         </table>
       </div>
       <button class="btn btn-ghost show-more" id="btn-more" style="display:none">Mostrar mais tickets</button>
+
+      <div class="section-label"><span class="arrow">➔</span> Capacitação e Artigos‡</div>
+      <div class="p-sub" style="margin:-6px 0 14px">tickets de treinamento/criação de conteúdo (campo "Artigo?" = Sim)
+        — fora de todos os KPIs, volumes, tempos e da listagem principal do painel</div>
+      <div class="table-tools">
+        <input type="search" id="art-search" placeholder="Buscar por ID, assunto, cliente ou responsável…"
+          aria-label="Buscar tickets de capacitação e artigos">
+        <button class="btn-reload" id="btn-export-art"
+          title="Baixa um CSV com os tickets de capacitação/artigos exatamente como filtrados">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11" />
+          </svg>
+          Exportar CSV
+        </button>
+      </div>
+      <div class="tbl-count" id="art-count"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Assunto</th>
+              <th>Responsável</th>
+              <th>Status</th>
+              <th>Entrada N2</th>
+              <th>Até assumir</th>
+              <th>Jira</th>
+              <th>Após Jira</th>
+              <th>Direcionado em</th>
+              <th>Indevido</th>
+              <th>Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="art-body"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-ghost show-more" id="btn-art-more" style="display:none">Mostrar mais tickets</button>
     </main>
 
     <footer>
-      Indicadores calculados na página conforme as regras oficiais do time (set/2026). A base dos KPIs é o total de
-      tickets do filtro, incluindo indevidos de qualquer categoria (Grafana, dúvida técnica/funcional, falta de
-      informação etc.), com uma única exclusão: os marcados como "Ticket Duplicado" ficam fora por completo. KPI 1 (%
-      Resolvidos sem Desenvolvimento) conta como resolvido todo ticket sem Jira dessa base; meta abaixo de 36%. KPI 2
-      (SLA de Diagnóstico) mede a % de chamados direcionados dentro do prazo da sua faixa de prioridade — Urgente ≤ 2h,
-      Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h — com meta de ≥ 80%. Quando o campo "Tempo para considerar" vem preenchido no
-      ticket, ele é a fonte oficial do tempo de direcionamento; sem ele, vale o cálculo pelas datas. Quando um percentil
-      está selecionado no filtro, os tempos mais discrepantes são removidos apenas dos cálculos de média (os KPIs e
-      volumes não mudam). Datas em horário de Brasília.
+      <p>Indicadores calculados no navegador a partir dos dados do período, conforme as regras oficiais do time
+        (set/2026). Quando um percentil está selecionado no filtro, os tempos mais discrepantes são removidos apenas
+        dos cálculos de média (KPIs e volumes não mudam). Datas em horário de Brasília.</p>
+      <p style="margin-top:10px">
+        <b>*</b> KPI 1 — % Resolvidos sem Desenvolvimento: sobre a base de tickets do período (indevidos de qualquer
+        categoria inclusos, exceto "Ticket Duplicado", que sai por completo), % que foi resolvida sem abrir Jira.
+        Meta: abaixo de 36%.<br>
+        <b>**</b> SLA de Diagnóstico: % de chamados direcionados dentro do prazo da sua faixa de prioridade, sobre a
+        mesma base — Urgente ≤ 2h, Alta ≤ 4h, Média ≤ 6h, Baixa ≤ 8h. Usa o campo "Tempo para considerar" quando
+        preenchido; sem ele, vale o cálculo pelas datas. Meta: ≥ 80% por faixa.<br>
+        <b>†</b> Indevidos: tickets marcados como indevidos que continuam na base dos KPIs (todas as categorias,
+        exceto duplicado). Duplicados: tickets com motivo "Ticket Duplicado", excluídos por completo (numerador e
+        denominador) da base de todos os indicadores.<br>
+        <b>‡</b> Capacitação e Artigos: tickets de treinamento/criação de conteúdo (campo "Artigo?" = Sim) não são
+        chamados operacionais — ficam fora de todos os KPIs, volumes, tempos, rankings e da listagem principal, e
+        aparecem só nesta seção.
+      </p>
     </footer>
   </div>
 
@@ -1700,13 +1726,15 @@
       token: null,
       apiUrl: null,
       raw: [],          // todos os tickets recebidos
-      view: [],         // após filtros locais
+      view: [],         // após filtros locais (exceto tickets de Artigo/Capacitação)
+      artigos: [],      // tickets com Artigo?=Sim, após filtros locais
       histMode: "day",
       percentil: 100,
       drill: null,
       priorJira: "",
       svcLvl: "serviceNivel1",
       tableLimit: CONFIG.TABLE_PAGE,
+      artTableLimit: CONFIG.TABLE_PAGE,
       demo: false
     };
 
@@ -1778,6 +1806,11 @@
     }
     function assumiuDepois(t) {
       return String(getCampo(t, "assumiudepoisdacriacaodojira") || "").trim().toLowerCase() === "sim";
+    }
+    // Ticket de capacitação/criação de artigo (campo "Artigo?") — fora de todos os KPIs, volumes,
+    // tempos, rankings e da listagem principal; aparece só na seção "Capacitação e Artigos"
+    function ehArtigo(t) {
+      return String(getCampo(t, "artigo") || "").trim().toLowerCase() === "sim";
     }
     // Tempo oficial de direcionamento: usa Tempo_para_considerar quando preenchido;
     // senão cai no cálculo antigo (criação do Jira ou finalização − entrada no N2)
@@ -1885,14 +1918,19 @@
       const ini = $("f-ini").value ? parseData($("f-ini").value + " 00:00:00") : null;
       const fim = $("f-fim").value ? parseData($("f-fim").value + " 23:59:59") : null;
       const pessoa = $("f-n2").value;
-      S.view = S.raw.filter(t => {
+      const dentroFiltro = t => {
         const ent = parseData(t.dataEntradaN2);
         if (ini && (!ent || ent < ini)) return false;
         if (fim && (!ent || ent > fim)) return false;
         if (pessoa && t.ownerAtual !== pessoa) return false;
         return true;
-      });
+      };
+      // tickets de Artigo/Capacitação saem de S.view (todos os KPIs, volumes, tempos, rankings e
+      // listagem principal) e vão só pra S.artigos (seção dedicada)
+      S.view = S.raw.filter(t => dentroFiltro(t) && !ehArtigo(t));
+      S.artigos = S.raw.filter(t => dentroFiltro(t) && ehArtigo(t));
       S.tableLimit = CONFIG.TABLE_PAGE;
+      S.artTableLimit = CONFIG.TABLE_PAGE;
       S.drill = null;
       renderTudo();
     }
@@ -1942,8 +1980,9 @@
     /* ================= CÁLCULOS ================= */
     function calc(tickets) {
       const validos = baseKpi(tickets);                       // base dos KPIs (sem duplicados)
-      const indevidos = tickets.filter(t => t.ticketIndevido === "Sim");
+      const indevidos = tickets.filter(t => t.ticketIndevido === "Sim");  // todos, incl. duplicados (p/ ranking de motivos)
       const duplicados = tickets.filter(ehDuplicado);
+      const indevidosBase = indevidos.filter(t => !ehDuplicado(t));       // indevidos que ficam na base dos KPIs
       const comJira = tickets.filter(t => !!t.jiraIssueKey);
       const semJira = tickets.filter(t => !t.jiraIssueKey);
       const abertos = tickets.filter(t => !isFechado(t));
@@ -1977,7 +2016,7 @@
       const tLifetime = media(col(t => toNum(t.lifetimeWorkingTime)));
 
       return {
-        validos, indevidos, duplicados, comJira, semJira, abertos, fechados, novos, depJira,
+        validos, indevidos, duplicados, indevidosBase, comJira, semJira, abertos, fechados, novos, depJira,
         kpi1, kpi1Num, kpi2, kpi2Num,
         tAssumir, tAteJira, tPessoaJira, tResolucao, tLifetime
       };
@@ -2174,9 +2213,9 @@
       const sf = calcSlaFaixas();
       const fmtPct = p => p == null ? "sem dados" : p.toFixed(1).replace(".", ",") + "%";
 
-      $("sla-sub").textContent = `meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto duplicados · usa o "Tempo para considerar" quando disponível`;
+      $("sla-sub").textContent = `KPI 1* e SLA de Diagnóstico** por prioridade · meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto duplicados · usa o "Tempo para considerar" quando disponível`;
 
-      // cards por prioridade (mesma linguagem visual dos KPIs)
+      // cards por prioridade (mesma linguagem visual dos KPIs), no próprio cabeçalho — clicáveis (drill)
       $("sla-cards").innerHTML = ordem.map(f => {
         const d = sf[f];
         const bate = d.pct != null && d.pct >= SLA_META_PCT;
@@ -2189,40 +2228,14 @@
     </div>`;
       }).join("");
 
-      const linhas = ordem.map(f => {
-        const d = sf[f];
-        const p = d.pct;
-        const bate = p != null && p >= SLA_META_PCT;
-        const w = p == null ? 0 : Math.min(100, p);
-        const cel = (escopo, valor) => valor > 0
-          ? `<td class="sla-link" data-prio="${f}" data-sla="${escopo}" title="Ver estes ${valor} tickets na listagem">${valor}</td>`
-          : `<td>${valor}</td>`;
-        return `<tr>
-      <td class="sla-link" data-prio="${f}" data-sla="todos" title="Ver os tickets ${nome[f]} na listagem"><b>${nome[f]}</b></td>
-      <td>${SLA_META_LABEL[f]}</td>
-      ${cel("todos", d.total)}
-      ${cel("dentro", d.dentro)}
-      ${cel("fora", d.total - d.dentro)}
-      <td><b>${p == null ? "—" : p.toFixed(1).replace(".", ",") + "%"}</b></td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="sla-meter" style="flex:1"><i class="${bate ? "hit" : "miss"}" style="width:${w}%"></i><span class="m80"></span></div>
-          <span class="sla-badge ${bate ? "hit" : "miss"}">${p == null ? "s/ dados" : (bate ? "OK" : "Abaixo")}</span>
-        </div>
-      </td>
-    </tr>`;
-      }).join("");
-
-      // linha de conferência: soma das faixas × base (explica duplicados e sem prioridade)
+      // linha de conferência: soma das faixas × base (explica duplicados e sem faixa reconhecida)
       const base = sf.__base;
       const somaFaixas = ordem.reduce((a, f) => a + sf[f].total, 0);
       const foraDeFaixa = base.length - somaFaixas;
       const nDup = S.view.filter(ehDuplicado).length;
-      let rodape = `<tr class="sla-foot"><td colspan="7">`;
-      rodape += `Base do SLA: ${base.length} tickets (indevidos de todas as outras categorias inclusos${nDup ? `; ${nDup} duplicado${nDup > 1 ? "s" : ""} excluído${nDup > 1 ? "s" : ""}` : "; nenhum duplicado no período"}).`;
-      if (foraDeFaixa > 0) rodape += ` ${foraDeFaixa} sem faixa de prioridade reconhecida ficam fora das linhas acima.`;
-      rodape += `</td></tr>`;
-      $("tbl-sla-body").innerHTML = (linhas + rodape) || '<tr><td colspan="7"><div class="empty">Sem dados no período.</div></td></tr>';
+      let nota = `Base do SLA: ${base.length} tickets (indevidos de todas as outras categorias inclusos${nDup ? `; ${nDup} duplicado${nDup > 1 ? "s" : ""} excluído${nDup > 1 ? "s" : ""}` : "; nenhum duplicado no período"})`;
+      nota += foraDeFaixa > 0 ? `; ${foraDeFaixa} sem faixa de prioridade reconhecida ficam fora dos cards acima.` : ".";
+      $("sla-foot-note").textContent = nota;
     }
 
     /* clique nos cards de prioridade → mesmos recortes da tabela */
@@ -2264,10 +2277,6 @@
       box.innerHTML = `<span class="drill-tag">Listando: ${escapeHtml(txt)} (${indTxt}) <span class="x" id="drill-x" title="Remover este recorte">×</span></span>`;
       $("drill-x").addEventListener("click", limparDrill);
     }
-    $("tbl-sla-body").addEventListener("click", e => {
-      const td = e.target.closest(".sla-link"); if (!td) return;
-      aplicarDrill(td.dataset.prio, td.dataset.sla);
-    });
 
     function renderPrioridades() {
       const media = a => { const arr = trimPercentil(a); return arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null; };
@@ -2349,14 +2358,6 @@
         : "nenhum ticket na base do filtro";
       aplicaMeta("kpi1-bar", "kpi1-meta", c.kpi1, KPI1_META_PCT, "min");
 
-      $("kpi2-val").textContent = pct(c.kpi2);
-      $("kpi2-sub").textContent = c.validos.length
-        ? `${c.kpi2Num} de ${c.validos.length} dentro do prazo da faixa · exceto duplicados`
-        : "nenhum ticket na base do filtro";
-      aplicaMeta("kpi2-bar", "kpi2-meta", c.kpi2, SLA_META_PCT, "max");
-
-      $("kpi3-val").textContent = fmtMin(c.tAssumir);
-      $("kpi4-val").textContent = fmtMin(c.tLifetime);
       renderSlaFaixas();
 
       // contadores
@@ -2374,8 +2375,11 @@
       $("c-jira").textContent = c.comJira.length;
       $("c-dep").textContent = c.depJira.length;
       $("c-dep-sub").textContent = c.comJira.length ? `${(c.depJira.length / c.comJira.length * 100).toFixed(0)}% dos com Jira` : "";
-      $("c-bad").textContent = c.indevidos.length;
-      $("c-bad-sub").textContent = totN ? `${c.indevidos.length}/${totN} · ${(c.indevidos.length / totN * 100).toFixed(0)}% do total` : "";
+      $("c-bad").textContent = c.indevidosBase.length;
+      $("c-bad-sub").textContent = totN ? `${c.indevidosBase.length}/${totN} · ${(c.indevidosBase.length / totN * 100).toFixed(0)}% do total · na base dos KPIs` : "";
+      $("c-dup").textContent = c.duplicados.length;
+      $("c-dup-sub").textContent = totN ? `${(c.duplicados.length / totN * 100).toFixed(0)}% do total · excluídos da base dos KPIs` : "";
+      $("c-tassumir").textContent = fmtMin(c.tAssumir);
 
       renderHistorico(t);
       renderRank($("rank-owner"), contagem(t, "ownerAtual"), 10, false, true);
@@ -2389,6 +2393,7 @@
       renderTempos(c, t);
       renderChipDrill();
       renderTabela();
+      renderArtigos();
     }
 
     function renderHistorico(tickets) {
@@ -2487,7 +2492,7 @@
     $("tbl-search").addEventListener("input", () => { S.tableLimit = CONFIG.TABLE_PAGE; renderTabela(); });
     ["t-cliente", "t-status", "t-jira", "t-sit", "t-dep"].forEach(id => $(id).addEventListener("change", () => { S.tableLimit = CONFIG.TABLE_PAGE; renderTabela(); }));
     $("btn-more").addEventListener("click", () => { S.tableLimit += CONFIG.TABLE_PAGE; renderTabela(); });
-    $("btn-export").addEventListener("click", exportarCSV);
+    $("btn-export").addEventListener("click", () => exportarCSV());
     $("f-pct").addEventListener("change", () => { S.percentil = Number($("f-pct").value); renderTudo(); });
 
     function popularFiltrosTabela() {
@@ -2538,8 +2543,9 @@
       });
     }
 
-    function exportarCSV() {
-      const rows = tabelaRows();
+    function exportarCSV(rows, prefixo) {
+      rows = rows || tabelaRows();
+      prefixo = prefixo || "tickets-n2";
       if (!rows.length) { alert("Nenhum ticket nos filtros atuais pra exportar."); return; }
       const cols = [
         ["ticketId", "Ticket"], ["subject", "Assunto"], ["ownerAtual", "Responsável"], ["status", "Status"],
@@ -2561,27 +2567,21 @@
       const blob = new Blob(["\uFEFF" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `tickets-n2-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`;
+      a.download = `${prefixo}-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(a.href);
     }
 
-    function renderTabela() {
-      const rows = tabelaRows();
-      const filtrado = rows.length !== S.view.length;
-      $("tbl-count").textContent = filtrado
-        ? `${rows.length} de ${S.view.length} tickets com os filtros da listagem`
-        : `${rows.length} tickets no período`;
-      const vis = rows.slice(0, S.tableLimit);
-      $("tbl-body").innerHTML = vis.map(t => {
-        const aberto = !isFechado(t);
-        const indevido = t.ticketIndevido === "Sim";
-        const tAssumir = duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2);
-        const mDir = minutosDirecionamento(t);
-        const depois = assumiuDepois(t);
-        return `<tr>
+    // linha <tr> compartilhada entre a listagem principal e a de Capacitação/Artigos
+    function tabelaLinhaHtml(t) {
+      const aberto = !isFechado(t);
+      const indevido = t.ticketIndevido === "Sim";
+      const tAssumir = duracaoMin(t["Abertura_até_assumir"]) ?? diffMin(t.dataAtribuicaoPessoaN2, t.dataEntradaN2);
+      const mDir = minutosDirecionamento(t);
+      const depois = assumiuDepois(t);
+      return `<tr>
       <td><b>${escapeHtml(t.ticketId)}</b></td>
       <td class="subj" title="${escapeHtml(t.subject)}">${escapeHtml(t.subject)}</td>
       <td>${escapeHtml(t.ownerAtual)}</td>
@@ -2594,10 +2594,50 @@
       <td>${indevido ? `<span class="tag bad" title="${escapeHtml(t.motivoIndevido || "")}">Sim</span>` : "Não"}</td>
       <td>${escapeHtml(t.categoria) || "—"}</td>
     </tr>`;
-      }).join("") || `<tr><td colspan="11"><div class="empty">Nenhum ticket encontrado.</div></td></tr>`;
+    }
+
+    function renderTabela() {
+      const rows = tabelaRows();
+      const filtrado = rows.length !== S.view.length;
+      $("tbl-count").textContent = filtrado
+        ? `${rows.length} de ${S.view.length} tickets com os filtros da listagem`
+        : `${rows.length} tickets no período`;
+      const vis = rows.slice(0, S.tableLimit);
+      $("tbl-body").innerHTML = vis.map(tabelaLinhaHtml).join("") || `<tr><td colspan="11"><div class="empty">Nenhum ticket encontrado.</div></td></tr>`;
       $("btn-more").style.display = rows.length > S.tableLimit ? "block" : "none";
       $("btn-more").textContent = `Mostrar mais tickets (${rows.length - Math.min(S.tableLimit, rows.length)} restantes)`;
     }
+
+    /* ================= CAPACITAÇÃO E ARTIGOS ================= */
+    function artigoRows() {
+      const q = $("art-search").value.trim().toLowerCase();
+      let rows = S.artigos;
+      if (q) {
+        rows = rows.filter(t =>
+          String(t.ticketId || "").toLowerCase().includes(q) ||
+          String(t.subject || "").toLowerCase().includes(q) ||
+          String(t.clientes || "").toLowerCase().includes(q) ||
+          String(t.jiraIssueKey || "").toLowerCase().includes(q) ||
+          String(t.ownerAtual || "").toLowerCase().includes(q)
+        );
+      }
+      return [...rows].sort((a, b) => {
+        const da = parseData(b.dataEntradaN2), db = parseData(a.dataEntradaN2);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+    }
+
+    function renderArtigos() {
+      const rows = artigoRows();
+      $("art-count").textContent = `${rows.length} ${rows.length === 1 ? "ticket" : "tickets"} de capacitação/artigos no período`;
+      const vis = rows.slice(0, S.artTableLimit);
+      $("art-body").innerHTML = vis.map(tabelaLinhaHtml).join("") || `<tr><td colspan="11"><div class="empty">Nenhum ticket de capacitação/artigo no período.</div></td></tr>`;
+      $("btn-art-more").style.display = rows.length > S.artTableLimit ? "block" : "none";
+      $("btn-art-more").textContent = `Mostrar mais tickets (${rows.length - Math.min(S.artTableLimit, rows.length)} restantes)`;
+    }
+    $("art-search").addEventListener("input", () => { S.artTableLimit = CONFIG.TABLE_PAGE; renderArtigos(); });
+    $("btn-art-more").addEventListener("click", () => { S.artTableLimit += CONFIG.TABLE_PAGE; renderArtigos(); });
+    $("btn-export-art").addEventListener("click", () => exportarCSV(artigoRows(), "tickets-artigos-n2"));
 
     function escapeHtml(v) {
       if (v == null) return "";
@@ -2627,8 +2667,9 @@
         if (ent.getDay() === 6) ent.setDate(ent.getDate() + 2);
         const assumirMin = 5 + Math.floor(Math.random() * 160);
         const assum = new Date(ent.getTime() + assumirMin * 60000);
-        const temJira = Math.random() < 0.32;
-        const indevido = !temJira && Math.random() < 0.09;
+        const artigo = Math.random() < 0.08; // ~8% de tickets de capacitação/criação de artigo
+        const temJira = !artigo && Math.random() < 0.32;
+        const indevido = !artigo && !temJira && Math.random() < 0.09;
         const finalizado = indevido || Math.random() < 0.82;
         let jiraData = "", fin = "";
         if (temJira) {
@@ -2654,7 +2695,9 @@
         const hms = m => { m = Math.max(0, Math.round(m)); return `${Math.floor(m / 60)}:${pad(m % 60)}:${pad(Math.floor(Math.random() * 60))}`; };
         out.push({
           ticketId: 48200 + i,
-          subject: rnd(["Erro ao enviar proposta", "Robô não iniciou a disputa", "Cliente sem acesso ao painel", "Divergência em relatório", "Falha na sincronização do portal", "Dúvida sobre alerta de edital", "Documento não anexado", "Sessão expira ao logar"]),
+          subject: artigo
+            ? rnd(["Criação de artigo", "Atualização de artigo da base", "Treinamento da equipe", "Gravação de capacitação"])
+            : rnd(["Erro ao enviar proposta", "Robô não iniciou a disputa", "Cliente sem acesso ao painel", "Divergência em relatório", "Falha na sincronização do portal", "Dúvida sobre alerta de edital", "Documento não anexado", "Sessão expira ao logar"]),
           status: fin ? rnd(["Resolvido", "Fechado"]) : rnd(status.slice(0, 3)),
           type: 2, urgency: urg, justification: null,
           ownerAtual: rnd(nomes), ownerAtualEmail: "n2@effecti.com.br",
@@ -2667,7 +2710,7 @@
           ticketIndevido: indevido ? "Sim" : "Não",
           motivoIndevido: indevido ? rnd(motivos) : null,
           reclameAqui: null, qtdTicketsVinculados: Math.random() < 0.15 ? 1 + Math.floor(Math.random() * 3) : null,
-          portal: rnd(svc2), categoria: rnd(cats), origemIncidente: null,
+          portal: rnd(svc2), categoria: artigo ? "Capacitação/Artigo" : rnd(cats), origemIncidente: null,
           causaRaizCliente: null, causaRaizEffecti: null, causaRaizPortal: null, causaRaizTerceiros: null,
           serviceNivel1: rnd(svc1), serviceNivel2: rnd(svc2), serviceNivel3: rnd(svc3),
           clientes: rnd(clientes),
@@ -2678,7 +2721,8 @@
           "N2_ate_aberturaJira": jiraData ? Math.round(diffMin(jiraData, fmt(assum))) : "",
           "Abertura_até_assumir": hms(assumirMin),
           "Assumiu _Depois_da_Criação do Jira?": temJira ? (depois ? "Sim" : "Não") : "Não",
-          "Tempo_para_considerar": dirAjustado == null ? "" : hms(dirAjustado)
+          "Tempo_para_considerar": dirAjustado == null ? "" : hms(dirAjustado),
+          "Artigo?": artigo ? "Sim" : "Não"
         });
       }
       return out;
