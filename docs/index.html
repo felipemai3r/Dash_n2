@@ -1832,6 +1832,10 @@
       if (m == null) return null;
       return m <= meta;
     }
+    // Ticket já teve alguma movimentação avaliável pro SLA (Jira aberto ou finalizado/devolvido)?
+    // Tickets ainda sem nenhuma das duas coisas não entram no cálculo de cumprimento de prazo —
+    // não é possível dizer se estão dentro ou fora de um prazo que ainda nem começou a ser medido.
+    function avaliavelSLA(t) { return dentroSLA(t) !== null; }
     // Tempo até a abertura do Jira (só tickets com Jira), com a mesma prioridade de fonte
     function minutosAteJira(t) {
       if (!t.jiraIssueKey) return null;
@@ -1994,11 +1998,13 @@
         kpi1 = kpi1Num / validos.length * 100;
       }
 
-      // KPI 2 — SLA de diagnóstico por prioridade: dentro do prazo da faixa, sobre a mesma base
+      // KPI 2 — SLA de diagnóstico por prioridade: dentro do prazo da faixa, sobre os tickets já
+      // avaliáveis (Jira aberto ou finalizado/devolvido) — quem ainda não movimentou fica de fora
       let kpi2 = null, kpi2Num = 0;
-      if (validos.length) {
-        kpi2Num = validos.filter(t => dentroSLA(t) === true).length;
-        kpi2 = kpi2Num / validos.length * 100;
+      const avaliaveisSla = validos.filter(avaliavelSLA);
+      if (avaliaveisSla.length) {
+        kpi2Num = avaliaveisSla.filter(t => dentroSLA(t) === true).length;
+        kpi2 = kpi2Num / avaliaveisSla.length * 100;
       }
 
       const fechados = tickets.filter(isFechado);
@@ -2051,7 +2057,10 @@
         let kpi1 = null, sla90 = null;
         if (validos.length) {
           kpi1 = validos.filter(resolvidoSemDev).length / validos.length * 100;
-          sla90 = validos.filter(t => dentroSLA(t) === true).length / validos.length * 100;
+        }
+        const avaliaveisSla = validos.filter(avaliavelSLA);
+        if (avaliaveisSla.length) {
+          sla90 = avaliaveisSla.filter(t => dentroSLA(t) === true).length / avaliaveisSla.length * 100;
         }
         return {
           nome,
@@ -2201,8 +2210,14 @@
       const out = { __base: base };
       ["highest", "alta", "media", "baixa"].forEach(f => {
         const grupo = base.filter(t => prioDe(t) === f);
-        const dentro = grupo.filter(t => dentroSLA(t) === true).length;
-        out[f] = { total: grupo.length, dentro, pct: grupo.length ? dentro / grupo.length * 100 : null };
+        const avaliaveis = grupo.filter(avaliavelSLA);
+        const dentro = avaliaveis.filter(t => dentroSLA(t) === true).length;
+        out[f] = {
+          total: avaliaveis.length,
+          dentro,
+          pct: avaliaveis.length ? dentro / avaliaveis.length * 100 : null,
+          aguardando: grupo.length - avaliaveis.length
+        };
       });
       return out;
     }
@@ -2213,27 +2228,32 @@
       const sf = calcSlaFaixas();
       const fmtPct = p => p == null ? "sem dados" : p.toFixed(1).replace(".", ",") + "%";
 
-      $("sla-sub").textContent = `KPI 1* e SLA de Diagnóstico** por prioridade · meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · todos os tickets, exceto duplicados · usa o "Tempo para considerar" quando disponível`;
+      $("sla-sub").textContent = `KPI 1* e SLA de Diagnóstico** por prioridade · meta ≥ ${SLA_META_PCT}% dos chamados dentro do prazo · só tickets com Jira aberto ou finalizados/devolvidos, exceto duplicados · usa o "Tempo para considerar" quando disponível`;
 
       // cards por prioridade (mesma linguagem visual dos KPIs), no próprio cabeçalho — clicáveis (drill)
       $("sla-cards").innerHTML = ordem.map(f => {
         const d = sf[f];
         const bate = d.pct != null && d.pct >= SLA_META_PCT;
         const cls = d.pct == null ? "nodata" : (bate ? "hit" : "miss");
+        const subDentro = d.total ? `${d.dentro} de ${d.total} dentro do prazo` : "nenhum chamado avaliável no filtro";
+        const subAguardando = d.aguardando > 0 ? ` · ${d.aguardando} aguardando movimentação` : "";
         return `<div class="kpi sla-card" data-prio="${f}" title="Ver os tickets ${nome[f]} na listagem" role="button" tabindex="0">
       <div class="k-label">${nome[f]} · ${SLA_META_LABEL[f]}</div>
       <div class="k-value ${cls}">${fmtPct(d.pct)}</div>
-      <div class="k-sub">${d.total ? `${d.dentro} de ${d.total} dentro do prazo` : "nenhum chamado no filtro"}</div>
+      <div class="k-sub">${subDentro}${subAguardando}</div>
       <div class="k-bar"><i class="${bate ? "hit" : "miss"}" style="width:${d.pct == null ? 0 : Math.min(100, d.pct)}%"></i><span class="meta-mark" style="left:${SLA_META_PCT}%"></span></div>
     </div>`;
       }).join("");
 
-      // linha de conferência: soma das faixas × base (explica duplicados e sem faixa reconhecida)
+      // linha de conferência: soma das faixas × base (explica duplicados, sem faixa reconhecida
+      // e tickets ainda sem movimentação — sem Jira aberto e não finalizados/devolvidos)
       const base = sf.__base;
       const somaFaixas = ordem.reduce((a, f) => a + sf[f].total, 0);
-      const foraDeFaixa = base.length - somaFaixas;
+      const somaAguardando = ordem.reduce((a, f) => a + sf[f].aguardando, 0);
+      const foraDeFaixa = base.length - somaFaixas - somaAguardando;
       const nDup = S.view.filter(ehDuplicado).length;
       let nota = `Base do SLA: ${base.length} tickets (indevidos de todas as outras categorias inclusos${nDup ? `; ${nDup} duplicado${nDup > 1 ? "s" : ""} excluído${nDup > 1 ? "s" : ""}` : "; nenhum duplicado no período"})`;
+      if (somaAguardando > 0) nota += `; ${somaAguardando} ainda sem Jira aberto e não finalizados/devolvidos ficam fora do cálculo (aguardando movimentação)`;
       nota += foraDeFaixa > 0 ? `; ${foraDeFaixa} sem faixa de prioridade reconhecida ficam fora dos cards acima.` : ".";
       $("sla-foot-note").textContent = nota;
     }
